@@ -1,0 +1,214 @@
+name: analytics-eng
+version: 1
+description: Analytics Engineering workflow - context → research → plan → analysis → validation → audit → summary
+artifacts:
+  - id: context
+    generates: context.md
+    description: Stakeholder request and business context gathering
+    template: context.md
+    instruction: |
+      Create the context document that captures WHY this analysis is needed and WHAT question we're answering.
+
+      Before writing, gather context from available sources:
+      - **Slack**: Search for related discussions using `mcp__plugin_slack_slack__slack_search_public` or read specific channels with `slack_read_channel`
+      - **Confluence**: Search documentation with `mcp__atlassian__confluence_search` and read pages with `confluence_get_page`
+      - **Stakeholder conversations**: Reference any direct requests or communications
+
+      Sections:
+      - **Stakeholder Request**: The original question or hypothesis. Who asked? What triggered this?
+      - **Business Context**: Why does this matter? What decisions will this inform?
+      - **Related Discussions**: Summary of relevant Slack threads, meetings, or prior analyses
+      - **Existing Documentation**: Links to relevant Confluence pages, dashboards, or DBT docs
+      - **Success Criteria**: How will we know the analysis answered the question? What format is expected?
+      - **Constraints**: Timeline, data availability, access limitations
+
+      Keep it focused on understanding the "why" - data exploration comes in Research.
+      This document is the anchor for validation at the end.
+    requires: []
+
+  - id: research
+    generates: research.md
+    description: Data exploration and feasibility assessment
+    template: research.md
+    instruction: |
+      Explore available data sources to assess feasibility of the analysis.
+
+      Use BigQuery tools for data exploration:
+      - `mcp__bigquery__list_dataset_ids` - List available datasets
+      - `mcp__bigquery__list_table_ids` - List tables in a dataset
+      - `mcp__bigquery__get_table_info` - Get schema and metadata for tables
+      - `mcp__bigquery__execute_sql` - Run exploratory queries (row counts, date ranges, sample data)
+
+      Use Looker tools for existing analytics:
+      - `mcp__bigquery__looker_get_explores` - Find relevant Explores
+      - `mcp__bigquery__looker_get_dashboards` - Check for existing dashboards
+      - `mcp__bigquery__looker_get_looks` - Find existing Looks
+
+      Sections:
+      - **Data Sources Identified**: Tables, datasets, and Explores relevant to the question
+      - **Data Quality Assessment**: Completeness, freshness, known issues
+      - **Feasibility**: Can the question be answered with available data? What's missing?
+      - **Data Lineage**: Where does the data come from? Key transformations?
+      - **Sample Data**: Representative samples showing data structure
+
+      **Quality Gate**: If data is insufficient, document gaps and discuss with stakeholder before proceeding.
+    requires:
+      - context
+
+  - id: plan
+    generates: plan.md
+    description: Analysis methodology and approach
+    template: plan.md
+    instruction: |
+      Design the analysis approach based on the question and available data.
+
+      Sections:
+      - **Objectives**: Specific, measurable goals. What metrics will answer the question?
+      - **Methodology**: Analytical approach (cohort analysis, funnel, regression, etc.)
+      - **Metrics Definition**: Clear definitions for each metric, including:
+        - Formula/calculation
+        - Data source and filters
+        - Time period and granularity
+      - **Segmentation**: How will data be sliced? (by region, customer type, time period, etc.)
+      - **Assumptions**: Documented assumptions about the data or business logic
+      - **Edge Cases**: Known scenarios that need special handling
+      - **Validation Approach**: How will we verify results are correct?
+
+      Keep methodology appropriate to the question - don't over-engineer simple analyses.
+      Reference the Context for success criteria and Research for data constraints.
+
+      **Quality Gate**: Review methodology with stakeholder before executing analysis.
+    requires:
+      - context
+      - research
+
+  - id: analysis
+    generates: analysis.md
+    description: Execute analysis and document findings
+    template: analysis.md
+    instruction: |
+      Execute the analysis plan and document findings with supporting evidence.
+
+      Use BigQuery and Looker for analysis:
+      - `mcp__bigquery__execute_sql` - Run analytical queries
+      - `mcp__bigquery__looker_query` - Query through Looker Explores
+      - `mcp__bigquery__looker_make_look` - Create saved Looks for key visualizations
+      - `mcp__bigquery__looker_make_dashboard` - Create dashboards if needed
+
+      Sections:
+      - **Executive Finding**: One paragraph summary - what's the answer?
+      - **Detailed Findings**: Each finding with:
+        - Clear statement of the finding
+        - Supporting data (tables, charts)
+        - Confidence level (high/medium/low)
+      - **Queries**: All SQL queries used (for reproducibility)
+      - **Visualizations**: Links to Looks or embedded charts
+      - **Unexpected Discoveries**: Notable patterns not directly answering the question
+
+      Best practices:
+      - Save ALL queries in the document for reproducibility
+      - Create Looks for key visualizations that stakeholders can revisit
+      - Note data quality issues encountered during analysis
+      - Be explicit about what the data does NOT show
+    requires:
+      - plan
+
+  - id: validation
+    generates: validation.md
+    description: Validate findings against original request
+    template: validation.md
+    instruction: |
+      Validate that the analysis answers the original stakeholder question.
+
+      Reference the Context document to ensure alignment with success criteria.
+
+      Sections:
+      - **Request vs Findings Matrix**: Map each success criterion to specific findings
+      - **Success Criteria Checklist**: For each criterion in Context:
+        - [ ] Criterion addressed?
+        - [ ] Evidence provided?
+        - [ ] Confidence level appropriate?
+      - **Consistency Checks**:
+        - Do totals add up correctly?
+        - Are trends consistent with known business events?
+        - Do segment breakdowns sum to totals?
+      - **Gaps Identified**: What questions remain unanswered?
+      - **Stakeholder Verification Points**: Key findings that need stakeholder confirmation
+
+      This is a self-check before external audit. Be honest about limitations.
+
+      **Quality Gate**: Confirm the original question is answered before proceeding.
+    requires:
+      - context
+      - analysis
+
+  - id: audit
+    generates: audit.md
+    description: Independent methodology and bias review
+    template: audit.md
+    instruction: |
+      Perform an independent audit of the analysis for methodological soundness.
+
+      Approach this as a critical reviewer, not the original analyst.
+
+      Sections:
+      - **Methodology Assessment**:
+        - Is the approach appropriate for the question?
+        - Are statistical methods correctly applied?
+        - Sample sizes adequate for conclusions?
+      - **Bias Checklist**:
+        - [ ] Survivorship bias checked?
+        - [ ] Selection bias addressed?
+        - [ ] Confirmation bias mitigated?
+        - [ ] Time period representative?
+        - [ ] Outliers appropriately handled?
+      - **Spot Checks**: Re-run key queries independently and verify results
+      - **Alternative Interpretations**: Could the data support different conclusions?
+      - **Confidence Level**: Overall confidence in findings (High/Medium/Low with justification)
+      - **Caveats**: Important limitations stakeholders must understand
+
+      Be rigorous. It's better to surface issues now than after decisions are made.
+    requires:
+      - analysis
+      - validation
+
+  - id: summary
+    generates: summary.md
+    description: Executive summary for stakeholders
+    template: summary.md
+    instruction: |
+      Create a concise executive summary for stakeholder consumption.
+
+      This is the primary deliverable. Make it actionable and clear.
+
+      Sections:
+      - **Bottom Line**: One sentence answer to the original question
+      - **Key Findings**: 3-5 bullet points with the most important insights
+      - **Recommendations**: Suggested actions based on findings
+      - **Supporting Evidence**: Links to detailed findings, dashboards, Looks
+      - **Methodology Note**: Brief description of approach (1-2 sentences)
+      - **Caveats**: Critical limitations stakeholders must consider
+      - **Next Steps**: Suggested follow-up analyses or actions
+
+      Write for executives - lead with conclusions, not methodology.
+      Keep it to one page if possible. Link to Analysis for details.
+    requires:
+      - analysis
+      - validation
+      - audit
+
+apply:
+  requires: [summary]
+  tracks: null
+  instruction: |
+    The analytics-eng workflow produces documentation artifacts, not code changes.
+    The apply phase is used to:
+    - Share the summary with stakeholders
+    - Create or update Confluence pages with findings
+    - Create final Looker dashboards
+    - Archive the analysis for future reference
+
+    Use these tools:
+    - `mcp__atlassian__confluence_create_page` or `confluence_update_page` to publish
+    - `mcp__bigquery__looker_make_dashboard` to create final dashboards
+    - `mcp__plugin_slack_slack__slack_send_message` to notify stakeholders
