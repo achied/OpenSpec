@@ -512,6 +512,8 @@ export class InitCommand {
     commandsSkipped: string[];
     removedCommandCount: number;
     removedSkillCount: number;
+    installedSkillCount: number;
+    installedCommandCount: number;
   }> {
     const createdTools: typeof tools = [];
     const refreshedTools: typeof tools = [];
@@ -539,6 +541,12 @@ export class InitCommand {
     const processedSchemaSkills = processSchemaSkills(rawSchemaSkills, OPENSPEC_VERSION);
     const skillsConfig = schemaName ? getSchemaSkillsConfig(schemaName, projectPath) : undefined;
     const skillsMode = skillsConfig?.mode ?? 'extend';
+
+    // Calculate actual installed counts based on mode
+    const installedSkillCount = shouldGenerateSkills
+      ? (skillsMode === 'replace' ? processedSchemaSkills.length : skillTemplates.length + processedSchemaSkills.length)
+      : 0;
+    const installedCommandCount = shouldGenerateCommands ? commandContents.length : 0;
 
     // Process each tool
     for (const tool of tools) {
@@ -617,6 +625,8 @@ export class InitCommand {
       commandsSkipped,
       removedCommandCount,
       removedSkillCount,
+      installedSkillCount,
+      installedCommandCount,
     };
   }
 
@@ -662,6 +672,8 @@ export class InitCommand {
       commandsSkipped: string[];
       removedCommandCount: number;
       removedSkillCount: number;
+      installedSkillCount: number;
+      installedCommandCount: number;
     },
     configStatus: 'created' | 'exists' | 'skipped'
   ): void {
@@ -677,16 +689,12 @@ export class InitCommand {
       console.log(`Refreshed: ${results.refreshedTools.map((t) => t.name).join(', ')}`);
     }
 
-    // Show counts (respecting profile filter)
+    // Show counts (using actual installed counts from generation)
     const successfulTools = [...results.createdTools, ...results.refreshedTools];
     if (successfulTools.length > 0) {
-      const globalConfig = getGlobalConfig();
-      const profile: Profile = (this.profileOverride as Profile) ?? globalConfig.profile ?? 'core';
-      const delivery: Delivery = globalConfig.delivery ?? 'both';
-      const workflows = getProfileWorkflows(profile, globalConfig.workflows);
       const toolDirs = [...new Set(successfulTools.map((t) => t.skillsDir))].join(', ');
-      const skillCount = delivery !== 'commands' ? getSkillTemplates(workflows).length : 0;
-      const commandCount = delivery !== 'skills' ? getCommandContents(workflows).length : 0;
+      const skillCount = results.installedSkillCount;
+      const commandCount = results.installedCommandCount;
       if (skillCount > 0 && commandCount > 0) {
         console.log(`${skillCount} skills and ${commandCount} commands in ${toolDirs}/`);
       } else if (skillCount > 0) {
