@@ -33,22 +33,66 @@ artifacts:
     instruction: |
       Explore available data sources to assess feasibility of the analysis.
 
-      Use BigQuery tools for data exploration:
+      ## Step 1: Inspect Local DBT Project (ALWAYS DO THIS FIRST)
+
+      Before querying BigQuery, understand what already exists in the DBT project:
+
+      **Project Structure:**
+      - Read `dbt_project.yml` to understand project organization and naming conventions
+      - Use Glob to find relevant models: `models/**/*.sql`
+      - Check for staging, intermediate, and mart layers
+
+      **Model Documentation:**
+      - Search for schema files: `models/**/*.yml` or `models/**/schema.yml`
+      - Read model descriptions, column descriptions, and tests
+      - Look for `sources.yml` to understand upstream data sources
+
+      **Model SQL:**
+      - Read the SQL of models that might be relevant to the analysis
+      - Understand existing transformations, filters, and business logic
+      - Identify reusable CTEs or intermediate models
+      - Note any hardcoded values, date filters, or business rules
+
+      **DBT Tests:**
+      - Check existing tests for data quality expectations
+      - Look for accepted_values, not_null, unique constraints
+      - These reveal implicit business rules and data contracts
+
+      **Dependencies:**
+      - Use `ref()` calls in SQL to trace model dependencies
+      - Identify which models feed into others
+      - Find the most appropriate model to start from (don't reinvent the wheel)
+
+      ## Step 2: Explore BigQuery (to fill gaps)
+
+      After understanding the DBT project, use BigQuery to explore what's NOT already modeled:
+
       - `mcp__bigquery__list_dataset_ids` - List available datasets
       - `mcp__bigquery__list_table_ids` - List tables in a dataset
       - `mcp__bigquery__get_table_info` - Get schema and metadata for tables
       - `mcp__bigquery__execute_sql` - Run exploratory queries (row counts, date ranges, sample data)
+
+      Focus on:
+      - Raw source tables that might have data not yet in DBT models
+      - Validating assumptions from DBT documentation against actual data
+      - Data freshness and completeness checks
+
+      ## Step 3: Check Existing Analytics
 
       Use Looker tools for existing analytics:
       - `mcp__bigquery__looker_get_explores` - Find relevant Explores
       - `mcp__bigquery__looker_get_dashboards` - Check for existing dashboards
       - `mcp__bigquery__looker_get_looks` - Find existing Looks
 
-      Sections:
+      ## Sections to Document
+
+      - **DBT Models Identified**: Relevant models, their purpose, and key transformations
       - **Data Sources Identified**: Tables, datasets, and Explores relevant to the question
-      - **Data Quality Assessment**: Completeness, freshness, known issues
+      - **Reusable Assets**: Existing models, CTEs, or Looks that can be leveraged
+      - **Data Quality Assessment**: Completeness, freshness, known issues (from tests and exploration)
       - **Feasibility**: Can the question be answered with available data? What's missing?
-      - **Data Lineage**: Where does the data come from? Key transformations?
+      - **Data Lineage**: Where does the data come from? Key transformations (from DBT)?
+      - **Gaps**: What additional models or transformations might be needed?
       - **Sample Data**: Representative samples showing data structure
 
       **Quality Gate**: If data is insufficient, document gaps and discuss with stakeholder before proceeding.
