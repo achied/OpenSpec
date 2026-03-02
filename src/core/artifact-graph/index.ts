@@ -2,8 +2,10 @@
 export {
   ArtifactSchema,
   SchemaYamlSchema,
+  SkillsConfigSchema,
   type Artifact,
   type SchemaYaml,
+  type SkillsConfig,
   type CompletedSet,
   type BlockedArtifacts,
 } from './types.js';

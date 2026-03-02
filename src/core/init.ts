@@ -45,6 +45,12 @@ import { getGlobalConfig, type Delivery, type Profile } from './global-config.js
 import { getProfileWorkflows, CORE_WORKFLOWS, ALL_WORKFLOWS } from './profiles.js';
 import { getAvailableTools } from './available-tools.js';
 import { migrateIfNeeded } from './migration.js';
+import { readProjectConfig } from './project-config.js';
+import {
+  loadSchemaSkills,
+  getSchemaSkillsConfig,
+  processSchemaSkills,
+} from './schema-skills.js';
 
 const require = createRequire(import.meta.url);
 const { version: OPENSPEC_VERSION } = require('../../package.json');
@@ -526,6 +532,14 @@ export class InitCommand {
     const skillTemplates = shouldGenerateSkills ? getSkillTemplates(workflows) : [];
     const commandContents = shouldGenerateCommands ? getCommandContents(workflows) : [];
 
+    // Load schema-specific skills if project has a config with schema
+    const projectConfig = readProjectConfig(projectPath);
+    const schemaName = projectConfig?.schema;
+    const rawSchemaSkills = schemaName ? loadSchemaSkills(schemaName, projectPath) : [];
+    const processedSchemaSkills = processSchemaSkills(rawSchemaSkills, OPENSPEC_VERSION);
+    const skillsConfig = schemaName ? getSchemaSkillsConfig(schemaName, projectPath) : undefined;
+    const skillsMode = skillsConfig?.mode ?? 'extend';
+
     // Process each tool
     for (const tool of tools) {
       const spinner = ora(`Setting up ${tool.name}...`).start();
@@ -536,18 +550,28 @@ export class InitCommand {
           // Use tool-specific skillsDir
           const skillsDir = path.join(projectPath, tool.skillsDir, 'skills');
 
-          // Create skill directories and SKILL.md files
-          for (const { template, dirName } of skillTemplates) {
+          // Install default skills unless schema uses 'replace' mode
+          if (skillsMode !== 'replace') {
+            // Create skill directories and SKILL.md files
+            for (const { template, dirName } of skillTemplates) {
+              const skillDir = path.join(skillsDir, dirName);
+              const skillFile = path.join(skillDir, 'SKILL.md');
+
+              // Generate SKILL.md content with YAML frontmatter including generatedBy
+              // Use hyphen-based command references for OpenCode
+              const transformer = tool.value === 'opencode' ? transformToHyphenCommands : undefined;
+              const skillContent = generateSkillContent(template, OPENSPEC_VERSION, transformer);
+
+              // Write the skill file
+              await FileSystemUtils.writeFile(skillFile, skillContent);
+            }
+          }
+
+          // Install schema-specific skills
+          for (const { dirName, content } of processedSchemaSkills) {
             const skillDir = path.join(skillsDir, dirName);
             const skillFile = path.join(skillDir, 'SKILL.md');
-
-            // Generate SKILL.md content with YAML frontmatter including generatedBy
-            // Use hyphen-based command references for OpenCode
-            const transformer = tool.value === 'opencode' ? transformToHyphenCommands : undefined;
-            const skillContent = generateSkillContent(template, OPENSPEC_VERSION, transformer);
-
-            // Write the skill file
-            await FileSystemUtils.writeFile(skillFile, skillContent);
+            await FileSystemUtils.writeFile(skillFile, content);
           }
         }
         if (!shouldGenerateSkills) {
