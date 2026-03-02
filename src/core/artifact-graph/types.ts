@@ -20,6 +20,12 @@ export const ApplyPhaseSchema = z.object({
   instruction: z.string().optional(),
 });
 
+// Skills configuration for schema-specific skills
+export const SkillsConfigSchema = z.object({
+  // 'replace' = only use schema skills, 'extend' = add to default skills
+  mode: z.enum(['replace', 'extend']).default('extend'),
+});
+
 // Full schema YAML structure
 export const SchemaYamlSchema = z.object({
   name: z.string().min(1, { error: 'Schema name is required' }),
@@ -28,11 +34,14 @@ export const SchemaYamlSchema = z.object({
   artifacts: z.array(ArtifactSchema).min(1, { error: 'At least one artifact required' }),
   // Optional apply phase configuration (for schema-aware apply instructions)
   apply: ApplyPhaseSchema.optional(),
+  // Optional skills configuration for schema-specific skills
+  skills: SkillsConfigSchema.optional(),
 });
 
 // Derived TypeScript types
 export type Artifact = z.infer<typeof ArtifactSchema>;
 export type ApplyPhase = z.infer<typeof ApplyPhaseSchema>;
+export type SkillsConfig = z.infer<typeof SkillsConfigSchema>;
 export type SchemaYaml = z.infer<typeof SchemaYamlSchema>;
 
 // Per-change metadata schema
