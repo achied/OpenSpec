@@ -31,12 +31,44 @@
 
 ## Queries
 
-<!-- All SQL queries used, for reproducibility -->
+<!-- All SQL queries used, for reproducibility.
+     Include metadata for each query to enable audit verification. -->
 
 ### Query: <!-- description -->
+
+**Metadata:**
+- **BigQuery Project**: <!-- PROJECT_EXPLORE / PROJECT_CORE -->
+- **Executed At**: <!-- timestamp -->
+- **Bytes Processed**: <!-- approximate -->
+- **Looker Explore Used**: <!-- if applicable, N/A otherwise -->
+
 ```sql
 
 ```
+
+**Result Summary**:
+| Key Metric | Value |
+|------------|-------|
+| | |
+
+---
+
+### Query: <!-- description -->
+
+**Metadata:**
+- **BigQuery Project**:
+- **Executed At**:
+- **Bytes Processed**:
+- **Looker Explore Used**:
+
+```sql
+
+```
+
+**Result Summary**:
+| Key Metric | Value |
+|------------|-------|
+| | |
 
 ## Visualizations
 

@@ -387,23 +387,105 @@ artifacts:
       - validation
       - audit
 
+  - id: presentation
+    generates: presentation.html
+    description: Executive slide deck from the completed analysis (optional — requires frontend-slides skill)
+    template: null
+    instruction: |
+      Generate an executive-quality HTML slide presentation from the completed analysis.
+
+      ## Prerequisites check
+
+      This artifact requires the `frontend-slides` skill to be installed.
+      Before proceeding, verify it is available:
+
+      ```bash
+      ls .claude/skills/ | grep slides
+      ```
+
+      If the skill is NOT installed, inform the user:
+
+      > "The `frontend-slides` skill is not installed. To generate the executive
+      > presentation, install it by running `openspec update` after adding the skill
+      > to your `.claude/skills/` directory, or ask your team admin to make it
+      > available. The other artifacts (summary.md, Confluence, Slack) are still
+      > complete and usable without it."
+
+      Do not attempt to generate slides without the skill. The skill contains
+      specific design guidelines that ensure the output is executive-quality.
+      Improvising without it will produce generic results.
+
+      ## If the skill IS available: invoke it with this brief
+
+      Use the `frontend-slides` skill with the following content extracted from the
+      completed artifacts. The skill will handle all design decisions.
+
+      **Content to include — in this order:**
+
+      1. **Title slide**
+         - Analysis title (from context.md — the original question, not the change name)
+         - Requestor and date (from context.md)
+         - One-sentence bottom line (from summary.md)
+
+      2. **The Question & Why It Matters** (1 slide)
+         - The original stakeholder question verbatim
+         - Business context: what decision this informs
+         - Success criteria defined at the start
+
+      3. **Key Findings** (1 slide per major finding, max 4)
+         - Each finding as a clear statement
+         - The supporting number or chart
+         - Confidence level
+         - Source (which query or Looker asset)
+
+      4. **Recommendations** (1 slide)
+         - Each recommendation from summary.md
+         - Rationale and priority
+
+      5. **Caveats & Next Steps** (1 slide)
+         - Critical limitations from audit.md (blockers or majors only)
+         - Top 2-3 refinement paths from audit.md Phase 3 (High priority only)
+         - Suggested follow-up analyses from summary.md
+
+      6. **Appendix: Sources** (1 slide)
+         - The Source Registry from context.md and research.md
+         - Links to full analysis, Looker dashboards, Confluence page
+
+      ## Design guidance to pass to the skill
+
+      - Audience: executives and business stakeholders, not data engineers
+      - Tone: authoritative and clear — lead with conclusions, never methodology
+      - Data visualizations: simple tables and callout numbers only — no complex charts
+      - Each slide: one idea, maximum 4 bullet points, never full paragraphs
+      - Caveats: present clearly but not defensively — they demonstrate rigor
+
+      ## Output
+
+      Save the presentation as `presentation.html` in the change folder.
+      It should be self-contained (no external dependencies) so it can be
+      shared via email or Confluence attachment without broken assets.
+    requires:
+      - summary
+
 apply:
   requires: [summary]
   tracks: null
   instruction: |
     The analytics-eng workflow produces documentation artifacts, not code changes.
     The apply phase is used to:
-    - Share the summary with stakeholders
+    - Share the summary and presentation with stakeholders
     - Create or update Confluence pages with findings
     - Create final Looker dashboards
     - Archive the analysis for future reference
 
     Steps:
-    1. Publish findings to Confluence:
+    1. If `presentation.html` exists in the change folder, attach it to the Confluence page
+       and include it in the Slack notification.
+    2. Publish findings to Confluence:
        - `mcp__atlassian__confluence_create_page` or `confluence_update_page`
-       - Include: bottom line, key findings, link to full analysis
-    2. Create final Looker dashboard if analysis produced new Looks:
+       - Include: bottom line, key findings, link to presentation, link to full analysis
+    3. Create final Looker dashboard if analysis produced new Looks:
        - `mcp__bigquery__looker_make_dashboard`
-    3. Notify stakeholders on Slack:
+    4. Notify stakeholders on Slack:
        - `mcp__plugin_slack_slack__slack_send_message`
-       - Include: bottom line, Confluence link
+       - Include: bottom line, Confluence link, presentation attachment if available
