@@ -1,6 +1,6 @@
 ---
 name: openspec-analyze
-description: Start a new data analysis using the analytics-eng workflow. Creates a structured analysis with context gathering, research, planning, execution, validation, audit, and summary phases.
+description: Reference guide for the analytics-eng workflow phases. Use openspec-bootstrap FIRST to initialize and create the analysis. Use this skill when OpenSpec is already initialized and you need guidance on a specific artifact phase.
 license: MIT
 compatibility: Requires openspec CLI and analytics-eng schema.
 metadata:
@@ -8,11 +8,13 @@ metadata:
   version: "1.0"
 ---
 
-# Analytics Analysis Workflow
+# Analytics Analysis Workflow — Phase Reference
 
 Start a new data analysis following the analytics-eng schema workflow.
 
 ## When to Use
+
+**If you have not yet initialized OpenSpec or created an analysis, use `openspec-bootstrap` first.**
 
 Use this skill when:
 - A stakeholder asks a data question that needs investigation
