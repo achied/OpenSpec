@@ -1,67 +1,163 @@
-## Methodology Assessment
+# Audit
 
-<!-- Is the approach appropriate for the question? -->
+## Phase 1: SQL Forensics
 
-### Appropriateness
-<!-- Is this the right analytical approach for the question asked? -->
+<!-- Re-execute every query from analysis.md independently and verify results -->
 
-### Statistical Validity
-<!-- Are statistical methods correctly applied? Sample sizes adequate? -->
+### Query Verification Log
 
-### Reproducibility
-<!-- Can someone else reproduce these results with the provided queries? -->
+| Query | Expected Result | Actual Result | Verdict | Notes |
+|-------|----------------|---------------|---------|-------|
+| | | | Verified / Verified with caveats / Failed | |
 
-## Bias Checklist
+### SQL Logic Issues Found
 
-<!-- Check for common analytical biases -->
+<!-- For each query, document logic concerns found during review -->
 
-- [ ] **Survivorship Bias**: Are we only looking at "survivors"? Missing churned users, failed transactions, etc.?
-- [ ] **Selection Bias**: Is the sample representative? Any systematic exclusions?
-- [ ] **Confirmation Bias**: Did we look for evidence that contradicts our hypothesis?
-- [ ] **Time Period**: Is the time period representative? Seasonality considered?
-- [ ] **Outliers**: Are outliers appropriately handled? Neither ignored nor unduly influential?
-- [ ] **Simpson's Paradox**: Do aggregate trends hold when segmented?
-- [ ] **Correlation vs Causation**: Are causal claims supported by the methodology?
+#### Query: <!-- description -->
 
-**Issues Found**:
+**Issues:**
+- [ ] JOIN type correct? (INNER vs LEFT — silent null drops?)
+- [ ] Date filters consistent with other queries?
+- [ ] WHERE clauses excluding records they shouldn't?
+- [ ] Aggregation at correct grain? (fanout risk on 1:N joins?)
+- [ ] NULLs handled explicitly?
+- [ ] Time zone consistent?
 
-## Spot Checks
-
-<!-- Re-run key queries independently and verify results -->
-
-### Check: <!-- description -->
-**Original Result**:
-**Verified Result**:
-**Match**: <!-- Yes / No / Partial -->
-**Notes**:
+**Notes:**
 
 ---
 
-### Check: <!-- description -->
-**Original Result**:
-**Verified Result**:
-**Match**: <!-- Yes / No / Partial -->
-**Notes**:
+#### Query: <!-- description -->
 
-## Alternative Interpretations
+**Issues:**
+- [ ] JOIN type correct?
+- [ ] Date filters consistent?
+- [ ] WHERE clauses appropriate?
+- [ ] Aggregation grain correct?
+- [ ] NULLs handled?
+- [ ] Time zone consistent?
 
-<!-- Could the data support different conclusions? -->
+**Notes:**
 
+### Phase 1 Verdict
+
+**SQL Integrity**: <!-- All verified / Issues found -->
+
+**Blockers from Phase 1:**
 1.
 2.
 
-## Confidence Level
+---
 
-<!-- Overall confidence in findings -->
+## Phase 2: Narrative Critique
 
-**Level**: <!-- High / Medium / Low -->
+<!-- Read the analysis as a story and identify where the narrative and data diverge -->
 
-**Justification**:
+### Issues Found
 
-## Caveats
+<!-- Use format: Issue | Evidence | Severity | Suggested Fix -->
 
-<!-- Important limitations stakeholders MUST understand -->
+#### Issue 1: <!-- title -->
 
+**Evidence**: <!-- Cite the specific finding or query in analysis.md -->
+
+**Severity**: <!-- Blocking / Major / Minor -->
+
+**Suggested Fix**:
+
+---
+
+#### Issue 2: <!-- title -->
+
+**Evidence**:
+
+**Severity**: <!-- Blocking / Major / Minor -->
+
+**Suggested Fix**:
+
+---
+
+### Bias Exposure
+
+| Bias Type | Checked? | Finding |
+|-----------|----------|---------|
+| **Survivorship bias** — churned/failed/deleted records included where relevant? | | |
+| **Selection bias** — analyzed population matches population conclusions apply to? | | |
+| **Period bias** — time window seasonal or anomalous? | | |
+| **Confirmation bias** — contradicting data points surfaced? | | |
+| **Simpson's Paradox** — aggregate trend holds when segmented? | | |
+| **Magnitude framing** — percentages vs absolutes used appropriately? | | |
+| **Causality claims** — causal claims backed by causal methodology? | | |
+
+**Bias issues found:**
+
+### Phase 2 Verdict
+
+**Narrative Integrity**: <!-- Sound / Issues found -->
+
+**Blockers from Phase 2:**
 1.
 2.
-3.
+
+---
+
+## Phase 3: Refinement Paths
+
+<!-- Concrete, actionable paths to sharpen this analysis, each tied to a specific finding -->
+
+### Path 1: <!-- Short descriptive title -->
+
+**Trigger**: <!-- What finding or issue prompted this? Cite it. -->
+
+**Action**: <!-- What specifically should be done? -->
+
+**Affected artifact**: <!-- Research / Plan / Analysis -->
+
+**Expected Impact**: <!-- What would change in the conclusions if addressed? -->
+
+**Priority**: <!-- High / Medium / Low -->
+
+---
+
+### Path 2: <!-- Short descriptive title -->
+
+**Trigger**:
+
+**Action**:
+
+**Affected artifact**: <!-- Research / Plan / Analysis -->
+
+**Expected Impact**:
+
+**Priority**: <!-- High / Medium / Low -->
+
+---
+
+### Path 3: <!-- Short descriptive title -->
+
+**Trigger**:
+
+**Action**:
+
+**Affected artifact**: <!-- Research / Plan / Analysis -->
+
+**Expected Impact**:
+
+**Priority**: <!-- High / Medium / Low -->
+
+---
+
+## Overall Audit Verdict
+
+**SQL Integrity**: <!-- All verified / Issues found: [list] -->
+
+**Narrative Integrity**: <!-- Sound / Issues found: [list] -->
+
+**Confidence in Conclusions**: <!-- High / Medium / Low -->
+
+*Justification*:
+
+**Blocker count**: <!-- How many issues must be resolved before sharing with stakeholders? -->
+
+**Recommended next step**: <!-- Ship as-is / Refine [artifact] / Restart from Plan -->

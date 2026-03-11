@@ -1,53 +1,57 @@
+# Validation
+
 ## Request vs Findings Matrix
 
-<!-- Map each success criterion from Context to specific findings in Analysis -->
+<!-- For each success criterion in context.md, map it to a specific finding in analysis.md.
+     Be explicit: if a criterion is not addressed, say so — do not mark it as covered when it isn't. -->
 
-| Success Criterion | Finding | Evidence | Status |
-|-------------------|---------|----------|--------|
-| | | | |
+| Success Criterion (from context.md) | Finding (from analysis.md) | Addressed? |
+|-------------------------------------|----------------------------|------------|
+| | | Yes / Partial / No |
+| | | Yes / Partial / No |
+| | | Yes / Partial / No |
 
-## Success Criteria Checklist
+## Answer Completeness
 
-<!-- For each criterion defined in Context -->
+<!-- Does the bottom line in analysis.md directly answer the original question? -->
 
-### Criterion: <!-- from context.md -->
-- [ ] Criterion addressed in findings?
-- [ ] Evidence provided?
-- [ ] Confidence level appropriate?
+**Original question** (from context.md):
 
-**Notes**:
+**Bottom line answer** (from analysis.md):
 
----
+**Assessment**:
+- [ ] Answer is direct and specific (not vague or hedged)
+- [ ] If question was "why did X happen" — causality is explained, not just correlation
+- [ ] If question was "how much" — specific numbers are provided
+- [ ] If question was "should we do X" — recommendation is clear
 
-### Criterion: <!-- from context.md -->
-- [ ] Criterion addressed in findings?
-- [ ] Evidence provided?
-- [ ] Confidence level appropriate?
+**Verdict**: <!-- Fully answered / Partially answered / Not answered -->
 
-**Notes**:
+## Missing Angles
 
-## Consistency Checks
-
-<!-- Verify internal consistency of the analysis -->
-
-- [ ] Totals add up correctly across segments
-- [ ] Trends consistent with known business events
-- [ ] Segment breakdowns sum to totals
-- [ ] Year-over-year comparisons make sense
-- [ ] No impossible values (negative counts, >100% rates where inappropriate)
-
-**Issues Found**:
-
-## Gaps Identified
-
-<!-- What questions remain unanswered? -->
+<!-- What aspects of the original question are NOT covered?
+     These feed into Audit as gap candidates. -->
 
 1.
 2.
+3.
 
 ## Stakeholder Verification Points
 
-<!-- Key findings that need stakeholder confirmation before finalizing -->
+<!-- Findings where the data is clear but the business interpretation requires
+     stakeholder confirmation (e.g., a metric behaves unexpectedly — was there
+     a known event that explains it?) -->
 
-- [ ]
-- [ ]
+| Finding | Question for Stakeholder | Why it matters |
+|---------|--------------------------|----------------|
+| | | |
+
+---
+
+## Validation Verdict
+
+**Criteria addressed**: <!-- X of Y -->
+
+**Quality Gate**: <!-- PASS: all criteria addressed / FAIL: >1 criterion unaddressed -->
+
+<!-- If FAIL: Stop and flag before proceeding to Audit. -->

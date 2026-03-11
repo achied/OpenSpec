@@ -1,84 +1,100 @@
+## Source Registry (continued from context.md)
+
+<!-- Add entries here for every asset read during research.
+     Start numbering from where context.md left off.
+     Do NOT re-list sources from context.md — only new ones found here. -->
+
+| # | Type | Resource | URL / Path | Read? | Key Contribution |
+|---|------|----------|------------|-------|------------------|
+| | DBT model | | `models/...` | ✅ / ❌ | |
+| | BigQuery table | | `project.dataset.table` | ✅ / ❌ | |
+| | Looker Explore | | | ✅ / ❌ | |
+| | Looker dashboard | | | ✅ / ❌ | |
+| | Looker Look | | | ✅ / ❌ | |
+
+---
+
 ## DBT Models Identified
 
-<!-- Relevant models from the local DBT project -->
+| Model | Layer | Path | Relevance | Reusable? |
+|-------|-------|------|-----------|-----------|
+| | staging / intermediate / mart | `models/...` | High / Medium / Low | Yes / No |
 
-| Model | Layer | Description | Key Columns | Relevance |
-|-------|-------|-------------|-------------|-----------|
-| | staging/intermediate/mart | | | |
+### Model Detail: `<!-- model_name -->`
 
-### Model Details
-
-#### <!-- model_name -->
 - **Path**: `models/...`
 - **Description**:
-- **Key Transformations**:
-- **Upstream Dependencies**:
-- **Tests Defined**:
+- **Key Business Logic** (filters, hardcoded values, rules encoded in SQL):
+- **Upstream Dependencies** (`ref()` calls):
+- **Tests Defined** (and what they tell us about data contracts):
+- **Gaps or Limitations**:
 
-## Reusable Assets
+---
 
-<!-- Existing models, CTEs, Looks, or dashboards that can be leveraged -->
+## Reusable Looker Assets
 
-- **DBT Models**:
-- **Looker Explores**:
-- **Existing Looks/Dashboards**:
+<!-- Existing assets that could answer or partially answer the question.
+     For each one: what question does it answer? what metrics does it use?
+     Could it be run as-is, adapted, or only used as reference? -->
 
-## Data Sources Identified
+### Dashboard / Look: `<!-- name -->`
 
-<!-- Raw tables or datasets NOT already modeled in DBT -->
+- **URL**:
+- **Explores used**:
+- **Metrics / measures defined**:
+- **Filters / time window applied**:
+- **Answers this question**: Yes (fully) / Partially / No
+- **How to use**: Run as-is / Adapt with different filters / Reference only
 
-| Source | Type | Description | Relevance |
-|--------|------|-------------|-----------|
-| | raw/external | | |
+---
+
+## Data Sources Identified (raw / unmodeled)
+
+<!-- Only tables NOT already covered by DBT models above -->
+
+| Source | Path | Date Range | Row Count | Gap it fills |
+|--------|------|------------|-----------|--------------|
+| | `project.dataset.table` | | | |
+
+---
 
 ## Data Quality Assessment
 
-<!-- Completeness, freshness, known issues for each source -->
+### Source: `<!-- name (cite Source Registry #) -->`
 
-### Source: <!-- name -->
 - **Date Range**:
-- **Completeness**:
-- **Freshness**:
+- **Completeness** (nulls, missing periods):
+- **Freshness** (last updated):
 - **Known Issues**:
-- **DBT Tests**: <!-- what tests exist? what do they tell us? -->
+- **DBT Tests** (what guarantees exist?):
 
-## Feasibility
+---
 
-<!-- Can the question be answered with available data? -->
+## Feasibility Verdict
 
-**Verdict**: <!-- Feasible / Partially Feasible / Not Feasible -->
+**Status**: <!-- Feasible / Partially Feasible / Not Feasible -->
 
-**Available in DBT**:
-<!-- What can be answered with existing models? -->
+**Available now** (can be answered with existing assets):
 
-**Gaps**:
-<!-- What data is missing or needs new modeling? -->
+**Gaps** (missing data or models required):
+
+**Blocker for stakeholder?** <!-- Yes / No — if Yes, stop here -->
+
+---
 
 ## Data Lineage
-
-<!-- Where does the data come from? Include DBT model dependencies -->
 
 ```
 Source System → Raw Tables → DBT Staging → DBT Intermediate → DBT Marts → Looker
 ```
 
-### Key DBT Dependencies
+### Key dependency chain for this analysis:
+
 ```
-model_a
-├── stg_source_x
-└── stg_source_y
-    └── raw_table_z
+<!-- e.g.:
+mart_retention
+├── int_user_activity
+│   └── stg_events (→ raw.events)
+└── stg_users (→ raw.users)
+-->
 ```
-
-## Sample Data
-
-<!-- Representative samples showing data structure and content -->
-
-### Model/Table: <!-- name -->
-```sql
--- Query used
-```
-
-| Column | Value |
-|--------|-------|
-| | |

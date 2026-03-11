@@ -1,26 +1,40 @@
 ## Stakeholder Request
 
-<!-- Who requested this analysis? What is the exact question or hypothesis? -->
-
 **Requestor**:
 **Date Requested**:
-**Question/Hypothesis**:
+**Question/Hypothesis** (exact phrasing where possible):
 
 ## Business Context
 
 <!-- Why does this matter? What decisions will this inform? -->
 
-## Related Discussions
+## Source Registry
 
-<!-- Summary of Slack threads, meetings, or prior analyses. Include links where possible. -->
+<!-- MANDATORY. Every resource consumed before writing this document.
+     A resource mentioned but not read does not belong here.
+     Research will add more entries — do not duplicate, only extend. -->
 
-## Existing Documentation
+| # | Type | Resource | URL / Path | Read? | Key Contribution |
+|---|------|----------|------------|-------|------------------|
+| 1 | Slack thread | | | ✅ / ❌ | |
+| 2 | Confluence page | | | ✅ / ❌ | |
+| 3 | Looker dashboard | | | ✅ / ❌ | |
 
-<!-- Links to relevant Confluence pages, dashboards, DBT docs, or prior analyses -->
+<!-- Types: Slack thread, Confluence page, Looker dashboard, Looker Look,
+           Looker Explore, DBT model, BigQuery table, External URL, Other -->
+
+## Key Facts Extracted
+
+<!-- Concrete facts, numbers, definitions, or hypotheses extracted from sources above.
+     Each fact should cite the source by its # in the Source Registry. -->
+
+- **[Source #]**:
+- **[Source #]**:
+- **[Source #]**:
 
 ## Success Criteria
 
-<!-- How will we know the analysis successfully answered the question? What format/output is expected? -->
+<!-- How will we know the analysis successfully answered the question? -->
 
 - [ ]
 - [ ]
@@ -28,8 +42,6 @@
 
 ## Constraints
 
-<!-- Timeline, data access limitations, stakeholder availability, etc. -->
-
-| Constraint | Impact |
-|------------|--------|
-| | |
+| Constraint | Source | Impact |
+|------------|--------|--------|
+| | | |
