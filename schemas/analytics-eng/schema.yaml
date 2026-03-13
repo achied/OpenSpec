@@ -390,7 +390,7 @@ artifacts:
   - id: presentation
     generates: presentation.html
     description: Executive slide deck from the completed analysis (optional — requires frontend-slides skill)
-    template: null
+    template: presentation.md
     instruction: |
       Generate an executive-quality HTML slide presentation from the completed analysis.
 
