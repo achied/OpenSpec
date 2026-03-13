@@ -11,6 +11,22 @@ artifacts:
     instruction: |
       Create the context document that captures WHY this analysis is needed and WHAT question we're answering.
 
+      ## FIRST: Ask for specific resources
+
+      Before doing any generic searches, ask the user for specific resources:
+
+      > "Do you have any specific resources for this analysis? For example:
+      > - A Slack thread link (e.g., `https://company.slack.com/archives/C.../p...`)
+      > - A channel + date range (e.g., `#data-questions, last week`)
+      > - A DM or group conversation
+      > - A Confluence page or Looker dashboard
+      >
+      > If not, I'll search broadly — but specific links help me find the right context faster."
+
+      **Wait for the user's response before proceeding.** If they provide specific resources,
+      consume those first. If they say "search broadly" or don't have specific resources,
+      then proceed with generic searches.
+
       ## CRITICAL: Consume every resource the user provides
 
       If the user gives you any link, URL, channel name, dashboard name, or document reference
@@ -88,9 +104,21 @@ artifacts:
       The rule is the same as in context: if you find it, you read it, you register it.
       A resource mentioned but not read is not a source — it is a guess.
 
-      ## Step 1: Inspect the DBT Project (ALWAYS FIRST)
+      ## Step 1: Inspect the DBT Project (ALWAYS FIRST — BLOCKER)
 
-      Before querying BigQuery, read what already exists:
+      Before querying BigQuery, ask the user about DBT projects:
+
+      > "Is there a DBT project relevant to this analysis? If yes, please:
+      > - Use `/add-dir` to add the project to context, OR
+      > - Tell me the path (e.g., `~/src/project-dbt`)
+      >
+      > If there's no DBT project or it's not relevant, just say 'skip DBT'."
+
+      **Wait for the user's response before proceeding.** This is a blocker — do not
+      continue to BigQuery exploration until you have an answer. DBT models often contain
+      the business logic that explains data discrepancies.
+
+      If a DBT project is provided:
 
       **Project structure:**
       - Read `dbt_project.yml` — understand naming conventions and model organization
@@ -122,6 +150,25 @@ artifacts:
       date range, and what gap it fills that DBT models don't cover.
 
       Always use the analysis project for queries, not core.
+
+      ## Step 2.5: Get Upstream Lineage (REQUIRED for key tables)
+
+      For every table that is central to the analysis, get its upstream lineage using
+      the `bigquery-lineage` skill:
+
+      ```
+      /bigquery-lineage <table_name> --depth 3
+      ```
+
+      Use depth 3-5 depending on complexity. This reveals:
+      - What raw/source tables feed into the table
+      - Intermediate transformations
+      - Potential points where data could diverge between sources
+
+      When comparing multiple data sources, get lineage for each and document where
+      their pipelines diverge. This often explains discrepancies.
+
+      Register lineage findings in the Source Registry and document in the Data Lineage section.
 
       ## Step 3: Read Looker Assets — do not just list them
 
