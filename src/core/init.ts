@@ -50,7 +50,14 @@ import {
   loadSchemaSkills,
   getSchemaSkillsConfig,
   processSchemaSkills,
+  schemaHasSkills,
 } from './schema-skills.js';
+import {
+  schemaHasCommands,
+  loadSchemaCommands,
+  processSchemaCommands,
+  getSchemaCommandsConfig,
+} from './schema-commands.js';
 
 const require = createRequire(import.meta.url);
 const { version: OPENSPEC_VERSION } = require('../../package.json');
@@ -531,22 +538,40 @@ export class InitCommand {
     // Get skill and command templates filtered by profile workflows
     const shouldGenerateSkills = delivery !== 'commands';
     const shouldGenerateCommands = delivery !== 'skills';
-    const skillTemplates = shouldGenerateSkills ? getSkillTemplates(workflows) : [];
-    const commandContents = shouldGenerateCommands ? getCommandContents(workflows) : [];
 
-    // Load schema-specific skills if project has a config with schema
+    // Load project config and schema
     const projectConfig = readProjectConfig(projectPath);
     const schemaName = projectConfig?.schema;
-    const rawSchemaSkills = schemaName ? loadSchemaSkills(schemaName, projectPath) : [];
-    const processedSchemaSkills = processSchemaSkills(rawSchemaSkills, OPENSPEC_VERSION);
+
+    // Load skills: use schema skills based on mode (extend or replace)
+    // Note: Default skills require per-tool transformation, so we keep templates separate
+    const hasSchemaSkillsDefined = schemaName ? schemaHasSkills(schemaName, projectPath) : false;
     const skillsConfig = schemaName ? getSchemaSkillsConfig(schemaName, projectPath) : undefined;
     const skillsMode = skillsConfig?.mode ?? 'extend';
 
-    // Calculate actual installed counts based on mode
-    const installedSkillCount = shouldGenerateSkills
-      ? (skillsMode === 'replace' ? processedSchemaSkills.length : skillTemplates.length + processedSchemaSkills.length)
-      : 0;
-    const installedCommandCount = shouldGenerateCommands ? commandContents.length : 0;
+    const defaultSkillTemplates = (shouldGenerateSkills && skillsMode !== 'replace')
+      ? getSkillTemplates(workflows)
+      : [];
+    const schemaSkillContents = (shouldGenerateSkills && hasSchemaSkillsDefined)
+      ? processSchemaSkills(loadSchemaSkills(schemaName!, projectPath), OPENSPEC_VERSION)
+      : [];
+
+    // Load commands: use schema commands based on mode (extend or replace)
+    const hasSchemaCommandsDefined = schemaName ? schemaHasCommands(schemaName, projectPath) : false;
+    const commandsConfig = schemaName ? getSchemaCommandsConfig(schemaName, projectPath) : undefined;
+    const commandsMode = commandsConfig?.mode ?? 'extend';
+
+    const defaultCommandContents = (shouldGenerateCommands && commandsMode !== 'replace')
+      ? getCommandContents(workflows)
+      : [];
+    const schemaCommandContents = (shouldGenerateCommands && hasSchemaCommandsDefined)
+      ? processSchemaCommands(loadSchemaCommands(schemaName!, projectPath))
+      : [];
+    const commandContents = [...defaultCommandContents, ...schemaCommandContents];
+
+    // Calculate actual installed counts
+    const installedSkillCount = defaultSkillTemplates.length + schemaSkillContents.length;
+    const installedCommandCount = commandContents.length;
 
     // Process each tool
     for (const tool of tools) {
@@ -558,25 +583,22 @@ export class InitCommand {
           // Use tool-specific skillsDir
           const skillsDir = path.join(projectPath, tool.skillsDir, 'skills');
 
-          // Install default skills unless schema uses 'replace' mode
-          if (skillsMode !== 'replace') {
-            // Create skill directories and SKILL.md files
-            for (const { template, dirName } of skillTemplates) {
-              const skillDir = path.join(skillsDir, dirName);
-              const skillFile = path.join(skillDir, 'SKILL.md');
+          // Install default skills (from TypeScript templates)
+          // Note: These require per-tool transformation for command references
+          for (const { template, dirName } of defaultSkillTemplates) {
+            const skillDir = path.join(skillsDir, dirName);
+            const skillFile = path.join(skillDir, 'SKILL.md');
 
-              // Generate SKILL.md content with YAML frontmatter including generatedBy
-              // Use hyphen-based command references for OpenCode
-              const transformer = tool.value === 'opencode' ? transformToHyphenCommands : undefined;
-              const skillContent = generateSkillContent(template, OPENSPEC_VERSION, transformer);
+            // Generate SKILL.md content with YAML frontmatter including generatedBy
+            // Use hyphen-based command references for OpenCode
+            const transformer = tool.value === 'opencode' ? transformToHyphenCommands : undefined;
+            const skillContent = generateSkillContent(template, OPENSPEC_VERSION, transformer);
 
-              // Write the skill file
-              await FileSystemUtils.writeFile(skillFile, skillContent);
-            }
+            await FileSystemUtils.writeFile(skillFile, skillContent);
           }
 
-          // Install schema-specific skills
-          for (const { dirName, content } of processedSchemaSkills) {
+          // Install schema skills (from markdown files, already processed)
+          for (const { dirName, content } of schemaSkillContents) {
             const skillDir = path.join(skillsDir, dirName);
             const skillFile = path.join(skillDir, 'SKILL.md');
             await FileSystemUtils.writeFile(skillFile, content);
