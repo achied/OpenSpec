@@ -51,8 +51,16 @@ Deliver the analysis - generate summary, presentation, and share with stakeholde
    - Lead with bottom line answer
    - Include 3-5 key findings
    - Add recommendations and next steps
-   - Document caveats clearly
+   - **MUST include audit findings in Caveats section:**
+     - Copy Audit Confidence level from audit.md
+     - List any bias exposures identified in Phase 2
+     - Document limitations that affect interpretation
    - Show progress: "Created summary.md"
+
+   **Verify audit integration**: Read the generated summary.md and confirm:
+   - Audit Confidence is filled in (not blank)
+   - Bias considerations are listed (or "None identified")
+   - If audit had Medium/Low confidence, this is explained
 
 5. **Generate presentation.html (optional)**
 
@@ -115,6 +123,8 @@ Analysis complete! Run `/opsx:archive` when ready to archive.
 
 **Guardrails**
 - **NEVER** share findings if audit has blockers without user confirmation
+- **NEVER** generate summary without audit findings in Caveats section
+- **ALWAYS** include Audit Confidence level in summary
 - **ALWAYS** ask user about delivery channels - don't auto-post
 - **ALWAYS** keep Slack messages concise - link to Confluence for details
 - Delegate presentation generation to `openspec-present` skill

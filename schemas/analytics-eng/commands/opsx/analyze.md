@@ -87,6 +87,26 @@ Execute the analysis - generate the execution artifacts (plan -> analysis -> val
    - Phase 3: Refinement Paths (suggest improvements)
    - Show progress: "Created audit.md"
 
+   **e. Audit Review Gate** (CRITICAL - do not skip)
+
+   After generating audit.md, check the Overall Audit Verdict:
+   - **Blocker count > 0**: STOP and present refinement options (see Output On Pause)
+   - **Confidence = Low**: STOP and present refinement options
+   - **Confidence = Medium with Major issues**: Ask user if they want to refine or proceed with caveats
+
+   If blockers exist, use **AskUserQuestion** with options:
+   > "The audit found issues that should be addressed before delivery:"
+   > [list blockers and major issues]
+   >
+   > - "Refine analysis" - Go back and address the issues
+   > - "Proceed with caveats" - Continue but document limitations clearly
+   > - "Restart from plan" - Redesign the methodology
+
+   **If user chooses "Refine analysis":**
+   - Re-run the affected artifact (analysis.md or plan.md)
+   - Re-run audit.md after changes
+   - Repeat until blockers are resolved or user chooses to proceed
+
 5. **Show final status**
    ```bash
    openspec status --change "<name>"
@@ -122,8 +142,9 @@ What would you like to do?
 **Guardrails**
 - **NEVER** skip prerequisites (context, research must be done)
 - **NEVER** proceed if feasibility is "Not Feasible" without user confirmation
+- **NEVER** skip the Audit Review Gate - blockers must be addressed or explicitly accepted
 - **ALWAYS** save all SQL queries in analysis.md for reproducibility
 - **ALWAYS** run audit SQL independently (don't just copy numbers)
+- **ALWAYS** iterate if audit finds blockers - don't just warn and continue
 - If validation shows missing success criteria, pause and discuss
-- If audit finds blockers, report them before suggesting delivery
 - Keep the user informed of progress through each artifact
