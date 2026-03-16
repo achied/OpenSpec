@@ -723,6 +723,168 @@ describe('InitCommand - profile and detection features', () => {
   });
 });
 
+describe('InitCommand - --schema flag', () => {
+  let testDir: string;
+  let configTempDir: string;
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(async () => {
+    testDir = path.join(os.tmpdir(), `openspec-init-schema-test-${Date.now()}`);
+    await fs.mkdir(testDir, { recursive: true });
+    originalEnv = { ...process.env };
+    configTempDir = path.join(os.tmpdir(), `openspec-config-schema-${Date.now()}`);
+    await fs.mkdir(configTempDir, { recursive: true });
+    process.env.XDG_CONFIG_HOME = configTempDir;
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    confirmMock.mockReset();
+    confirmMock.mockResolvedValue(true);
+    showWelcomeScreenMock.mockClear();
+    searchableMultiSelectMock.mockReset();
+  });
+
+  afterEach(async () => {
+    process.env = originalEnv;
+    await fs.rm(testDir, { recursive: true, force: true });
+    await fs.rm(configTempDir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it('should create config.yaml with specified schema', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'analytics-eng',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    const configPath = path.join(testDir, 'openspec', 'config.yaml');
+    expect(await fileExists(configPath)).toBe(true);
+
+    const content = await fs.readFile(configPath, 'utf-8');
+    expect(content).toContain('schema: analytics-eng');
+  });
+
+  it('should install schema-specific skills when --schema is provided', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'analytics-eng',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    // analytics-eng skills should be installed (with schema prefix)
+    const analyzeSkill = path.join(testDir, '.claude', 'skills', 'analytics-eng-openspec-analyze', 'SKILL.md');
+    const investigateSkill = path.join(testDir, '.claude', 'skills', 'analytics-eng-openspec-investigate', 'SKILL.md');
+
+    expect(await fileExists(analyzeSkill)).toBe(true);
+    expect(await fileExists(investigateSkill)).toBe(true);
+
+    // Default skills should NOT be installed (analytics-eng uses mode: replace)
+    const defaultExploreSkill = path.join(testDir, '.claude', 'skills', 'openspec-explore', 'SKILL.md');
+    expect(await fileExists(defaultExploreSkill)).toBe(false);
+  });
+
+  it('should install schema-specific commands when --schema is provided', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'analytics-eng',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    // analytics-eng commands should be installed
+    const analyzeCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'analyze.md');
+    const investigateCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'investigate.md');
+    const deliverCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'deliver.md');
+
+    expect(await fileExists(analyzeCmd)).toBe(true);
+    expect(await fileExists(investigateCmd)).toBe(true);
+    expect(await fileExists(deliverCmd)).toBe(true);
+
+    // Default commands should NOT be installed (analytics-eng uses mode: replace)
+    const defaultProposeCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'propose.md');
+    const defaultNewCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'new.md');
+    expect(await fileExists(defaultProposeCmd)).toBe(false);
+    expect(await fileExists(defaultNewCmd)).toBe(false);
+  });
+
+  it('should throw error for invalid schema name', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'invalid-schema-name',
+      force: true,
+    });
+
+    await expect(initCommand.execute(testDir)).rejects.toThrow(/Unknown schema "invalid-schema-name"/);
+  });
+
+  it('should list available schemas in error message for invalid schema', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'non-existent',
+      force: true,
+    });
+
+    await expect(initCommand.execute(testDir)).rejects.toThrow(/analytics-eng/);
+    await expect(initCommand.execute(testDir)).rejects.toThrow(/spec-driven/);
+  });
+
+  it('should update existing config.yaml when --schema is provided', async () => {
+    // Create existing config
+    const openspecDir = path.join(testDir, 'openspec');
+    await fs.mkdir(openspecDir, { recursive: true });
+    const configPath = path.join(openspecDir, 'config.yaml');
+    await fs.writeFile(configPath, 'schema: spec-driven\ncontext: existing\n');
+
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      schema: 'analytics-eng',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    const content = await fs.readFile(configPath, 'utf-8');
+    expect(content).toContain('schema: analytics-eng');
+  });
+
+  it('should work with default schema when --schema is not provided', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    const configPath = path.join(testDir, 'openspec', 'config.yaml');
+    const content = await fs.readFile(configPath, 'utf-8');
+    expect(content).toContain('schema: spec-driven');
+
+    // Default skills should be installed
+    const defaultExploreSkill = path.join(testDir, '.claude', 'skills', 'openspec-explore', 'SKILL.md');
+    expect(await fileExists(defaultExploreSkill)).toBe(true);
+  });
+
+  it('should use spec-driven schema without --schema flag', async () => {
+    const initCommand = new InitCommand({
+      tools: 'claude',
+      force: true,
+    });
+
+    await initCommand.execute(testDir);
+
+    // Default core profile commands should be installed
+    const proposeCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'propose.md');
+    const exploreCmd = path.join(testDir, '.claude', 'commands', 'opsx', 'explore.md');
+
+    expect(await fileExists(proposeCmd)).toBe(true);
+    expect(await fileExists(exploreCmd)).toBe(true);
+  });
+});
+
 async function fileExists(filePath: string): Promise<boolean> {
   try {
     await fs.access(filePath);
