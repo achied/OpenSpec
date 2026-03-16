@@ -55,6 +55,28 @@ export function getSchemaSkillsDir(
 }
 
 /**
+ * Checks if a schema has custom skills defined.
+ */
+export function schemaHasSkills(
+  schemaName: string,
+  projectRoot?: string
+): boolean {
+  const skillsDir = getSchemaSkillsDir(schemaName, projectRoot);
+  if (!skillsDir) return false;
+
+  try {
+    const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
+    return entries.some(entry => {
+      if (!entry.isDirectory()) return false;
+      const skillFile = path.join(skillsDir, entry.name, 'SKILL.md');
+      return fs.existsSync(skillFile);
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Loads all skills defined in a schema's skills directory.
  */
 export function loadSchemaSkills(
