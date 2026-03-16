@@ -46,6 +46,7 @@ import { getProfileWorkflows, CORE_WORKFLOWS, ALL_WORKFLOWS } from './profiles.j
 import { getAvailableTools } from './available-tools.js';
 import { migrateIfNeeded } from './migration.js';
 import { readProjectConfig } from './project-config.js';
+import { listSchemas } from './artifact-graph/resolver.js';
 import {
   loadSchemaSkills,
   getSchemaSkillsConfig,
@@ -93,6 +94,7 @@ const WORKFLOW_TO_SKILL_DIR: Record<string, string> = {
 
 type InitCommandOptions = {
   tools?: string;
+  schema?: string;
   force?: boolean;
   interactive?: boolean;
   profile?: string;
@@ -104,12 +106,14 @@ type InitCommandOptions = {
 
 export class InitCommand {
   private readonly toolsArg?: string;
+  private readonly schemaOverride?: string;
   private readonly force: boolean;
   private readonly interactiveOption?: boolean;
   private readonly profileOverride?: string;
 
   constructor(options: InitCommandOptions = {}) {
     this.toolsArg = options.tools;
+    this.schemaOverride = options.schema;
     this.force = options.force ?? false;
     this.interactiveOption = options.interactive;
     this.profileOverride = options.profile;
@@ -157,11 +161,11 @@ export class InitCommand {
     // Create directory structure and config
     await this.createDirectoryStructure(openspecPath, extendMode);
 
+    // Create or update config.yaml (handles --schema flag if provided)
+    const configStatus = await this.createConfig(openspecPath, projectPath, extendMode);
+
     // Generate skills and commands for each tool
     const results = await this.generateSkillsAndCommands(projectPath, validatedTools);
-
-    // Create config.yaml if needed
-    const configStatus = await this.createConfig(openspecPath, extendMode);
 
     // Display success message
     this.displaySuccessMessage(projectPath, validatedTools, results, configStatus);
@@ -656,13 +660,39 @@ export class InitCommand {
   // CONFIG FILE
   // ═══════════════════════════════════════════════════════════
 
-  private async createConfig(openspecPath: string, extendMode: boolean): Promise<'created' | 'exists' | 'skipped'> {
+  private async createConfig(
+    openspecPath: string,
+    projectPath: string,
+    extendMode: boolean
+  ): Promise<'created' | 'updated' | 'exists' | 'skipped'> {
     const configPath = path.join(openspecPath, 'config.yaml');
     const configYmlPath = path.join(openspecPath, 'config.yml');
     const configYamlExists = fs.existsSync(configPath);
     const configYmlExists = fs.existsSync(configYmlPath);
+    const existingConfigPath = configYamlExists ? configPath : configYmlExists ? configYmlPath : null;
 
-    if (configYamlExists || configYmlExists) {
+    // Validate --schema if provided
+    if (this.schemaOverride) {
+      const availableSchemas = listSchemas(projectPath);
+      if (!availableSchemas.includes(this.schemaOverride)) {
+        throw new Error(
+          `Unknown schema "${this.schemaOverride}". Available schemas:\n  ${availableSchemas.join('\n  ')}`
+        );
+      }
+    }
+
+    // If --schema provided, create or update config
+    if (this.schemaOverride) {
+      const existingConfig = readProjectConfig(projectPath);
+      const newConfig = { ...existingConfig, schema: this.schemaOverride };
+      const yamlContent = serializeConfig(newConfig);
+      const targetPath = existingConfigPath || configPath;
+      await FileSystemUtils.writeFile(targetPath, yamlContent);
+      return existingConfigPath ? 'updated' : 'created';
+    }
+
+    // No --schema flag: original behavior
+    if (existingConfigPath) {
       return 'exists';
     }
 
@@ -697,7 +727,7 @@ export class InitCommand {
       installedSkillCount: number;
       installedCommandCount: number;
     },
-    configStatus: 'created' | 'exists' | 'skipped'
+    configStatus: 'created' | 'updated' | 'exists' | 'skipped'
   ): void {
     console.log();
     console.log(chalk.bold('OpenSpec Setup Complete'));
@@ -743,13 +773,16 @@ export class InitCommand {
     }
 
     // Config status
+    const configYaml = path.join(projectPath, OPENSPEC_DIR_NAME, 'config.yaml');
+    const configYml = path.join(projectPath, OPENSPEC_DIR_NAME, 'config.yml');
+    const configName = fs.existsSync(configYaml) ? 'config.yaml' : fs.existsSync(configYml) ? 'config.yml' : 'config.yaml';
+
     if (configStatus === 'created') {
-      console.log(`Config: openspec/config.yaml (schema: ${DEFAULT_SCHEMA})`);
+      const schema = this.schemaOverride || DEFAULT_SCHEMA;
+      console.log(`Config: openspec/${configName} (schema: ${schema})`);
+    } else if (configStatus === 'updated') {
+      console.log(`Config: openspec/${configName} (schema: ${this.schemaOverride})`);
     } else if (configStatus === 'exists') {
-      // Show actual filename (config.yaml or config.yml)
-      const configYaml = path.join(projectPath, OPENSPEC_DIR_NAME, 'config.yaml');
-      const configYml = path.join(projectPath, OPENSPEC_DIR_NAME, 'config.yml');
-      const configName = fs.existsSync(configYaml) ? 'config.yaml' : fs.existsSync(configYml) ? 'config.yml' : 'config.yaml';
       console.log(`Config: openspec/${configName} (exists)`);
     } else {
       console.log(chalk.dim(`Config: skipped (non-interactive mode)`));
