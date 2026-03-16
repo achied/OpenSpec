@@ -26,6 +26,12 @@ export const SkillsConfigSchema = z.object({
   mode: z.enum(['replace', 'extend']).default('extend'),
 });
 
+// Commands configuration for schema-specific commands
+export const CommandsConfigSchema = z.object({
+  // 'replace' = only use schema commands, 'extend' = add to default commands
+  mode: z.enum(['replace', 'extend']).default('extend'),
+});
+
 // Full schema YAML structure
 export const SchemaYamlSchema = z.object({
   name: z.string().min(1, { error: 'Schema name is required' }),
@@ -36,12 +42,15 @@ export const SchemaYamlSchema = z.object({
   apply: ApplyPhaseSchema.optional(),
   // Optional skills configuration for schema-specific skills
   skills: SkillsConfigSchema.optional(),
+  // Optional commands configuration for schema-specific commands
+  commands: CommandsConfigSchema.optional(),
 });
 
 // Derived TypeScript types
 export type Artifact = z.infer<typeof ArtifactSchema>;
 export type ApplyPhase = z.infer<typeof ApplyPhaseSchema>;
 export type SkillsConfig = z.infer<typeof SkillsConfigSchema>;
+export type CommandsConfig = z.infer<typeof CommandsConfigSchema>;
 export type SchemaYaml = z.infer<typeof SchemaYamlSchema>;
 
 // Per-change metadata schema
