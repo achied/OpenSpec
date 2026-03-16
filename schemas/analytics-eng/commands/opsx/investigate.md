@@ -17,6 +17,23 @@ When ready to execute, run /opsx:analyze
 
 **Input**: The argument after `/opsx:investigate` is the analysis name (kebab-case), OR a description of what the user wants to analyze.
 
+---
+
+**Search Discipline** (prevents context explosion)
+
+The scope is defined by what the user provides. Do NOT search beyond it.
+
+| Source | User provides | Action |
+|--------|---------------|--------|
+| **Slack** | Link to message | Read message + full thread if exists |
+| **Slack** | Link + time range | Read messages in range + their threads |
+| **Confluence** | Link to page | Read page + linked pages (1 level) |
+| **Looker** | Link to dashboard/Look | Read resource + underlying Explore |
+
+**If context is insufficient** → ask user for more links, do not search.
+
+---
+
 **Steps**
 
 1. **If no input provided, ask what they want to analyze**
@@ -31,14 +48,12 @@ When ready to execute, run /opsx:analyze
 2. **Ask for specific resources BEFORE creating the change**
 
    Use the **AskUserQuestion tool** (open-ended) to ask:
-   > "Do you have specific resources for this analysis?
-   > - Slack thread link or channel + date range
-   > - Confluence page
-   > - Looker dashboard or Look
-   >
-   > Or should I search broadly?"
+   > "What resources should I use for context?
+   > - Slack link (I'll read the thread if it has one)
+   > - Slack link + time range (I'll read subsequent messages too)
+   > - Confluence page or Looker dashboard"
 
-   **Wait for the user's response.** This determines how context gathering will proceed.
+   **Wait for the user's response.** The scope of context gathering is defined by what they provide.
 
 3. **Create the change directory**
    ```bash
@@ -55,7 +70,7 @@ When ready to execute, run /opsx:analyze
 
    Follow the instruction to:
    - Consume every resource the user provided via MCP tools
-   - Search Slack/Confluence/Looker for additional context
+   - Follow links/references found IN those resources (max 1 level deep)
    - Fill in the Source Registry with every resource read
    - Document stakeholder request, business context, success criteria
 
@@ -69,11 +84,12 @@ When ready to execute, run /opsx:analyze
    ```
 
    Follow the instruction to:
-   - **Ask about DBT projects first** (this is a BLOCKER - wait for response)
+   - **Ask about DBT and Looker projects** (BLOCKER - wait for response):
+     > "Do you have a DBT project I should inspect? Path to `dbt_project.yml`?
+     > Do you have a Looker project? Name or connection?"
    - Inspect DBT models if provided
-   - Explore BigQuery tables
    - Get upstream lineage for key tables (`/bigquery-lineage <table> --depth 3`)
-   - Read Looker Explores, dashboards, Looks
+   - If Looker project provided, explore its models/Explores
    - Assess feasibility
    - Continue the Source Registry from context.md
 
@@ -95,7 +111,7 @@ After completing artifacts, summarize:
 **Guardrails**
 - **NEVER** fabricate context - use MCP tools to read every source
 - **NEVER** skip asking for resources - specific links save time
-- **NEVER** skip the DBT project question - it's a BLOCKER
+- **NEVER** skip the DBT/Looker project question - it's a BLOCKER
 - **ALWAYS** wait for user responses to blocking questions
 - **ALWAYS** register every source consumed in the Source Registry
 - If the user provides a Slack link, read the full thread (not just the first message)
