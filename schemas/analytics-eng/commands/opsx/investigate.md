@@ -87,10 +87,16 @@ The scope is defined by what the user provides. Do NOT search beyond it.
    - **Ask about DBT and Looker projects** (BLOCKER - wait for response):
      > "Do you have a DBT project I should inspect? Path to `dbt_project.yml`?
      > Do you have a Looker project? Name or connection?"
-   - Inspect DBT models if provided
-   - Get upstream lineage for key tables (`/bigquery-lineage <table> --depth 3`)
-   - If Looker project provided, explore its models/Explores
-   - Assess feasibility
+   - **Inspect DBT models** if provided:
+     - Read model SQL and document key business logic (filters, calculations, joins)
+     - Identify hardcoded values, business rules encoded in WHERE clauses
+   - **Trace lineage** for key tables (`/bigquery-lineage <table> --depth 3`):
+     - Document the full dependency chain from source to mart
+     - Identify where transformations happen that could affect the analysis
+   - **Inspect Looker assets** if project provided:
+     - Read Explore definitions, document measure/dimension logic
+     - Check for filters, derived tables, or calculations that affect results
+   - Assess feasibility with understanding of the data transformations
    - Continue the Source Registry from context.md
 
    Show progress: "Created research.md"

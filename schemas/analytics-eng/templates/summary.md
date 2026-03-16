@@ -31,12 +31,20 @@
 
 <!-- 1-2 sentences on the approach used -->
 
-## Caveats
+## Caveats & Audit Findings
 
-<!-- Critical limitations stakeholders must consider before acting -->
+<!-- Critical limitations stakeholders must consider before acting.
+     MUST include any issues identified in audit.md Phase 2 (Narrative Critique).
+     If audit confidence was Medium or Low, explain why here. -->
 
+**Audit Confidence**: <!-- High / Medium / Low — copy from audit.md -->
+
+**Key limitations:**
 1.
 2.
+
+**Bias considerations** (from audit):
+<!-- List any bias exposures identified in audit.md that affect interpretation -->
 
 ## Next Steps
 
