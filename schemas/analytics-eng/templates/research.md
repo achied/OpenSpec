@@ -8,7 +8,8 @@
 |---|------|----------|------------|-------|------------------|
 | | DBT model | | `models/...` | ✅ / ❌ | |
 | | BigQuery table | | `project.dataset.table` | ✅ / ❌ | |
-| | Looker Explore | | | ✅ / ❌ | |
+| | LookML view | | `views/...` | ✅ / ❌ | |
+| | LookML explore | | `models/...` | ✅ / ❌ | |
 | | Looker dashboard | | | ✅ / ❌ | |
 | | Looker Look | | | ✅ / ❌ | |
 
@@ -31,7 +32,59 @@
 
 ---
 
-## Reusable Looker Assets
+## LookML Project (if inspected)
+
+<!-- Only fill if a Looker project was provided and inspected -->
+
+### Project Overview
+
+- **Project path**:
+- **Connection(s)**:
+- **Key models/explores**:
+
+### View Detail: `<!-- view_name -->`
+
+- **Path**: `views/...`
+- **Base table** (`sql_table_name`):
+- **Key Dimensions**:
+  - `dimension_name`: type, sql definition, business logic encoded
+- **Key Measures**:
+  - `measure_name`: type, sql definition, filters applied
+- **Derived Tables** (if any):
+  - Materialization strategy (persisted / triggered / ephemeral)
+  - SQL or explore_source definition summary
+- **Business Logic Encoded**:
+
+### Explore Detail: `<!-- explore_name -->`
+
+- **Path**: `models/...` or `explores/...`
+- **Base view** (`from:`):
+- **Joins**:
+  | Joined View | Relationship | Join Type | sql_on |
+  |-------------|--------------|-----------|--------|
+  | | one_to_many / many_to_one / etc. | left_outer / inner | |
+- **Hidden Filters**:
+  - `sql_always_where`:
+  - `always_filter`:
+  - `access_filter`:
+- **Fanout Risk**: Yes / No — explain if yes
+
+### LookML Patterns Found
+
+<!-- Patterns that could explain discrepancies or affect analysis -->
+
+- [ ] `sql_always_where` in explores (hidden filters)
+- [ ] Inner joins that exclude records
+- [ ] Derived tables with hardcoded date filters
+- [ ] Measures with embedded filters
+- [ ] Fanout joins (1:N) affecting counts
+- [ ] `cancel_grouping_fields` usage
+
+**Notes**:
+
+---
+
+## Reusable Looker Assets (via API)
 
 <!-- Existing assets that could answer or partially answer the question.
      For each one: what question does it answer? what metrics does it use?

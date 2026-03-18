@@ -1,5 +1,12 @@
 # Audit
 
+> **Purpose**: Is the ANSWER CORRECT?
+>
+> Audit checks CORRECTNESS and rigor. Validation already confirmed we're answering the right question.
+> Now we verify the technical foundations: SQL accuracy, narrative integrity, and bias exposure.
+
+---
+
 ## Phase 1: SQL Forensics
 
 <!-- Re-execute every query from analysis.md independently and verify results -->

@@ -1,5 +1,12 @@
 # Validation
 
+> **Purpose**: Did we answer the RIGHT QUESTION?
+>
+> Validation checks ALIGNMENT with stakeholder needs. It does NOT verify correctness (Audit does that).
+> Even a technically perfect analysis fails validation if it answers a different question.
+
+---
+
 ## Request vs Findings Matrix
 
 <!-- For each success criterion in context.md, map it to a specific finding in analysis.md.

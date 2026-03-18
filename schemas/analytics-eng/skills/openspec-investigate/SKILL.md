@@ -5,88 +5,130 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.1"
 ---
+
+# Investigate
 
 Start a new analysis - create the change and generate initial artifacts (context + research).
 
-I'll create an analysis with artifacts:
+**Artifacts created:**
 - context.md (stakeholder request, business context, sources)
 - research.md (data sources, DBT models, Looker assets, feasibility)
 
-When ready to execute, run /opsx:analyze
+When ready to execute, run `/opsx:analyze`
 
 ---
 
-**Input**: The user's request should include an analysis name (kebab-case) OR a description of what they want to analyze.
+## Search Discipline
 
-**Steps**
+The scope is defined by what the user provides. Do NOT search beyond it.
 
-1. **If no clear input provided, ask what they want to analyze**
+| Source | User provides | Action |
+|--------|---------------|--------|
+| **Slack** | Link to message | Read message + full thread if exists |
+| **Slack** | Link + time range | Read messages in range + their threads |
+| **Confluence** | Link to page | Read page + linked pages (1 level) |
+| **Looker** | Link to dashboard/Look | Read resource + underlying Explore |
 
-   Use the **AskUserQuestion tool** (open-ended, no preset options) to ask:
-   > "What analysis do you want to work on? Describe the question or problem you're investigating."
+**If context is insufficient** -> ask user for more links, do not search broadly.
 
-   From their description, derive a kebab-case name.
+---
 
-   **IMPORTANT**: Do NOT proceed without understanding what the user wants to analyze.
+## Input
 
-2. **Ask for specific resources BEFORE creating the change**
+The input should be an analysis name (kebab-case) OR a description of what the user wants to analyze.
 
-   Use the **AskUserQuestion tool** (open-ended) to ask:
-   > "Do you have specific resources for this analysis?
-   > - Slack thread link or channel + date range
-   > - Confluence page
-   > - Looker dashboard or Look
-   >
-   > Or should I search broadly?"
+Example: "why do these two reports show different numbers" -> `report-discrepancy-mar-2026`
 
-   **Wait for the user's response.** This determines how context gathering will proceed.
+---
 
-3. **Create the change directory**
-   ```bash
-   openspec new change "<name>" --schema analytics-eng
-   ```
+## Steps
 
-4. **Generate context.md**
+### 1. Clarify the analysis (if needed)
 
-   Get instructions:
-   ```bash
-   openspec instructions context --change "<name>" --json
-   ```
+If no clear input provided, use **AskUserQuestion** (open-ended) to ask:
 
-   Follow the instruction to:
-   - Consume every resource the user provided via MCP tools
-   - Search Slack/Confluence/Looker for additional context
-   - Fill in the Source Registry with every resource read
-   - Document stakeholder request, business context, success criteria
+> "What analysis do you want to work on? Describe the question or problem you're investigating."
 
-   Show progress: "Created context.md"
+From their description, derive a kebab-case name.
 
-5. **Generate research.md**
+**IMPORTANT**: Do NOT proceed without understanding what the user wants to analyze.
 
-   Get instructions:
-   ```bash
-   openspec instructions research --change "<name>" --json
-   ```
+### 2. Ask for specific resources BEFORE creating the change
 
-   Follow the instruction to:
-   - **Ask about DBT projects first** (this is a BLOCKER - wait for response)
-   - Inspect DBT models if provided
-   - Explore BigQuery tables
-   - Get upstream lineage for key tables (`/bigquery-lineage <table> --depth 3`)
-   - Read Looker Explores, dashboards, Looks
-   - Assess feasibility
-   - Continue the Source Registry from context.md
+Use **AskUserQuestion** (open-ended) to ask:
 
-   Show progress: "Created research.md"
+> "What resources should I use for context?
+> - Slack link (I'll read the thread if it has one)
+> - Slack link + time range (I'll read subsequent messages too)
+> - Confluence page or Looker dashboard"
 
-6. **Show final status**
-   ```bash
-   openspec status --change "<name>"
-   ```
+**Wait for the user's response.** The scope of context gathering is defined by what they provide.
 
-**Output**
+### 3. Create the change directory
+
+```bash
+openspec new change "<name>" --schema analytics-eng
+```
+
+This creates a scaffolded change at `openspec/changes/<name>/` with `.openspec.yaml`.
+
+### 4. Generate context.md
+
+Get instructions:
+```bash
+openspec instructions context --change "<name>" --json
+```
+
+Follow the instruction to:
+- Consume every resource the user provided via MCP tools
+- Follow links/references found IN those resources (max 1 level deep)
+- Fill in the Source Registry with every resource read
+- Document stakeholder request, business context, success criteria
+
+Show progress: "Created context.md"
+
+### 5. Generate research.md
+
+Get instructions:
+```bash
+openspec instructions research --change "<name>" --json
+```
+
+**First, ask about DBT and Looker projects** (BLOCKER - wait for response):
+
+> "Do you have a DBT project I should inspect? Path to `dbt_project.yml`?
+> Do you have a Looker project I should inspect? Path to the project folder?"
+
+Then follow the instruction to:
+- **Inspect DBT models** if provided:
+  - Read model SQL and document key business logic (filters, calculations, joins)
+  - Identify hardcoded values, business rules encoded in WHERE clauses
+  - Read schema.yml for tests and documentation
+- **Trace lineage** for key tables (`/bigquery-lineage <table> --depth 3`):
+  - Document the full dependency chain from source to mart
+  - Identify where transformations happen that could affect the analysis
+- **Inspect LookML files** if Looker project provided:
+  - Read `.view.lkml` files: dimensions, measures, derived tables
+  - Read `.model.lkml` files: explores, joins, hidden filters
+  - Document `sql_table_name` to understand which BigQuery tables back each view
+  - Look for `sql_always_where`, inner joins, measure filters that affect results
+  - Check derived tables for business logic and materialization strategy
+- Assess feasibility with understanding of the data transformations
+- Continue the Source Registry from context.md
+
+Show progress: "Created research.md"
+
+### 6. Show final status
+
+```bash
+openspec status --change "<name>"
+```
+
+---
+
+## Output
 
 After completing artifacts, summarize:
 - Analysis name and location
@@ -94,10 +136,14 @@ After completing artifacts, summarize:
 - Key findings from research (feasibility verdict, key data sources)
 - Prompt: "Run `/opsx:analyze` to design and execute the analysis."
 
-**Guardrails**
+---
+
+## Guardrails
+
 - **NEVER** fabricate context - use MCP tools to read every source
 - **NEVER** skip asking for resources - specific links save time
-- **NEVER** skip the DBT project question - it's a BLOCKER
+- **NEVER** skip the DBT/Looker project question - it's a BLOCKER
+- **NEVER** search broadly - scope is defined by user-provided resources
 - **ALWAYS** wait for user responses to blocking questions
 - **ALWAYS** register every source consumed in the Source Registry
 - If the user provides a Slack link, read the full thread (not just the first message)

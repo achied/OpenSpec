@@ -43,7 +43,7 @@ artifacts:
         or hypotheses were stated, what data was referenced. Do not stop at the first message.
 
       - **Confluence links or page names**:
-        Use `mcp__atlassian__confluence_search` to find the page, then `confluence_get_page`
+        Use `mcp__atlassian__confluence_search` to find the page, then `mcp__atlassian__confluence_get_page`
         to read its full content. Extract: relevant definitions, prior analyses, documented
         business logic, or KPI definitions that are relevant to the question.
 
@@ -172,7 +172,68 @@ artifacts:
 
       Register lineage findings in the Source Registry and document in the Data Lineage section.
 
-      ## Step 3: Read Looker Assets — do not just list them
+      ## Step 3: Inspect the Looker Project (if provided — BLOCKER)
+
+      Ask the user about Looker projects:
+
+      > "Is there a Looker project I should inspect? If yes, please:
+      > - Use `/add-dir` to add the project to context, OR
+      > - Tell me the path (e.g., `~/src/company-looker`)
+      >
+      > If there's no Looker project or it's not relevant, just say 'skip Looker project'."
+
+      **Wait for the user's response before proceeding.** This is a blocker — Looker projects
+      contain measure definitions, derived tables, and business logic that explain how metrics
+      are calculated. Without reading the LookML, you're guessing at definitions.
+
+      If a Looker project is provided:
+
+      **Project structure:**
+      - Read `manifest.lkml` if present — understand project name, includes, localizations
+      - Use Glob to find views: `**/*.view.lkml`
+      - Use Glob to find models: `**/*.model.lkml`
+      - Use Glob to find explores: `**/*.explore.lkml` (if separate from models)
+
+      **For each view that might be relevant:**
+      - Read the full `.view.lkml` file — do not skim
+      - Extract `sql_table_name` — which BigQuery table does this view sit on?
+      - For each dimension:
+        - What's the `sql` definition? Is it a direct column or a calculation?
+        - Are there `case` statements encoding business logic?
+        - What `type` is it? (especially `yesno`, `tier`, `duration`)
+      - For each measure:
+        - What's the `type` (count, sum, average, count_distinct, etc.)?
+        - What's the `sql` definition? Especially look for:
+          - Filters in the measure (`filters: [field: "value"]`)
+          - Conditional aggregations (`sql: CASE WHEN ... END`)
+          - References to other measures (`${other_measure}`)
+        - What `drill_fields` are defined? These reveal intended analysis paths
+      - For derived tables:
+        - Read the full `derived_table` block
+        - Is it `sql:` based or `explore_source:` based?
+        - What's the materialization strategy? (persisted, triggered, etc.)
+        - This is often where complex business logic lives
+      - Register each view in the Source Registry with: path, base table, key measures/dimensions
+
+      **For each model/explore that might be relevant:**
+      - Read the `.model.lkml` or explore definition
+      - Extract the base view (`from:`) and all joins
+      - For each join:
+        - What's the `relationship`? (one_to_one, many_to_one, one_to_many, many_to_many)
+        - What's the `sql_on` condition?
+        - Is it `type: left_outer` or `type: inner`? Inner joins can silently exclude records
+      - Are there `always_filter` or `conditionally_filter` blocks? These affect all queries
+      - Are there `access_filter` blocks? These restrict data by user
+      - Register in Source Registry with: explores defined, joins, filters applied
+
+      **LookML patterns that explain discrepancies:**
+      - `sql_always_where` in explores → hidden filters affecting all queries
+      - `cancel_grouping_fields` → affects how measures aggregate
+      - `fanout` warnings → 1:N joins that can inflate counts
+      - `symmetric_aggregates` → Looker's handling of fanout
+      - Derived tables with hardcoded date filters → data freshness issues
+
+      ## Step 4: Read Looker Assets via API — do not just list them
 
       Use Looker tools to find existing analytics on this topic:
       - `mcp__bigquery__looker_get_explores` — find relevant Explores
@@ -204,7 +265,8 @@ artifacts:
 
       - **Source Registry** (continuation from context.md): Every asset read in this phase
       - **DBT Models Identified**: Relevant models with path, layer, purpose, key logic
-      - **Reusable Looker Assets**: Existing Explores, dashboards, Looks that cover the topic
+      - **LookML Project** (if inspected): Views, explores, joins, hidden filters, derived tables
+      - **Reusable Looker Assets** (via API): Existing dashboards, Looks that cover the topic
       - **Data Sources Identified**: Raw tables or datasets not yet modeled in DBT
       - **Data Quality Assessment**: Completeness, freshness, known issues per source
       - **Feasibility Verdict**: Feasible / Partially Feasible / Not Feasible with justification
@@ -276,13 +338,24 @@ artifacts:
 
   - id: validation
     generates: validation.md
-    description: Validate that findings directly answer the original stakeholder question
+    description: "ALIGNMENT CHECK: Did we answer the right question? Maps findings to stakeholder success criteria."
     template: validation.md
     instruction: |
-      Single-purpose check: does this analysis answer what was asked in Context?
+      ## Purpose: Did we answer the RIGHT QUESTION?
 
-      This is NOT a data quality check (that belongs in Audit). This is a narrative
-      alignment check between the stakeholder's question and what the analysis delivers.
+      Validation checks ALIGNMENT — whether the analysis addresses what the stakeholder asked.
+      It does NOT check correctness (that's Audit's job).
+
+      | Validation | Audit |
+      |------------|-------|
+      | Did we answer the right question? | Is the answer correct? |
+      | Maps findings → success criteria | Verifies SQL and numbers |
+      | Checks narrative alignment | Checks technical rigor |
+      | "Are we solving the right problem?" | "Did we solve it correctly?" |
+
+      This is a narrative alignment check between the stakeholder's question and what
+      the analysis delivers. Even a technically perfect analysis fails validation if
+      it answers a different question than what was asked.
 
       Sections:
       - **Request vs Findings Matrix**: For each success criterion in context.md, map it
@@ -306,12 +379,24 @@ artifacts:
 
   - id: audit
     generates: audit.md
-    description: Deep independent audit - SQL verification, narrative critique, and refinement paths
+    description: "CORRECTNESS CHECK: Is the answer right? SQL verification, narrative critique, bias exposure."
     template: audit.md
     instruction: |
-      Perform a rigorous independent audit. You are a skeptical peer reviewer who did NOT
-      run this analysis. Your job is to stress-test the foundations, expose inconsistencies,
-      and identify what would make this analysis sharper.
+      ## Purpose: Is the ANSWER CORRECT?
+
+      Audit checks CORRECTNESS — whether the analysis is technically sound and rigorous.
+      It assumes Validation already confirmed we're answering the right question.
+
+      | Validation | Audit |
+      |------------|-------|
+      | Did we answer the right question? | Is the answer correct? |
+      | Maps findings → success criteria | Verifies SQL and numbers |
+      | Checks narrative alignment | Checks technical rigor |
+      | "Are we solving the right problem?" | "Did we solve it correctly?" |
+
+      You are a skeptical peer reviewer who did NOT run this analysis. Your job is to
+      stress-test the foundations, expose inconsistencies, and identify what would make
+      this analysis sharper.
 
       This audit has three distinct phases. Execute all three.
 
@@ -426,11 +511,18 @@ artifacts:
       - **Recommendations**: Suggested actions based on findings
       - **Supporting Evidence**: Links to detailed findings, dashboards, Looks
       - **Methodology Note**: Brief description of approach (1-2 sentences)
-      - **Caveats**: Critical limitations stakeholders must consider
+      - **Caveats & Audit Findings**: CRITICAL — must include:
+        - Audit Confidence level (copy from audit.md Overall Verdict)
+        - Key limitations that affect interpretation
+        - Bias considerations identified in audit.md Phase 2
+        - If Audit Confidence was Medium or Low, explain why
       - **Next Steps**: Suggested follow-up analyses or actions
 
       Write for executives - lead with conclusions, not methodology.
       Keep it to one page if possible. Link to Analysis for details.
+
+      **IMPORTANT**: Do not soften or hide audit findings. Stakeholders need to know
+      the confidence level and limitations. This demonstrates rigor, not weakness.
     requires:
       - analysis
       - validation
@@ -531,7 +623,7 @@ apply:
     1. If `presentation.html` exists in the change folder, attach it to the Confluence page
        and include it in the Slack notification.
     2. Publish findings to Confluence:
-       - `mcp__atlassian__confluence_create_page` or `confluence_update_page`
+       - `mcp__atlassian__confluence_create_page` or `mcp__atlassian__confluence_update_page`
        - Include: bottom line, key findings, link to presentation, link to full analysis
     3. Create final Looker dashboard if analysis produced new Looks:
        - `mcp__bigquery__looker_make_dashboard`
