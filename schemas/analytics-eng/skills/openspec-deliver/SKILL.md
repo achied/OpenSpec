@@ -5,71 +5,123 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "1.1"
 ---
+
+# Deliver
 
 Deliver the analysis - generate summary, presentation, and share with stakeholders.
 
 ---
 
-**Steps**
+## Input
 
-1. **Select the analysis**
+Optionally specify an analysis name. If omitted, infer from context or prompt for selection.
 
-   If a name is provided, use it. Otherwise infer or prompt.
+Always announce: "Using analysis: <name>"
 
-2. **Check prerequisites**
+---
 
-   ```bash
-   openspec status --change "<name>" --json
-   ```
+## Steps
 
-   Verify: context, research, plan, analysis, validation, audit are `done`.
+### 1. Check prerequisites
 
-3. **Check audit verdict**
+```bash
+openspec status --change "<name>" --json
+```
 
-   - **Blockers > 0**: Warn user, ask for confirmation
-   - **Confidence = Low**: Suggest addressing refinement paths first
-   - **Confidence = Medium/High**: Proceed
+Verify these artifacts are `done`:
+- context, research, plan, analysis, validation, audit
 
-4. **Generate summary.md**
+**If prerequisites are not met:**
+- Display warning listing incomplete artifacts
+- Suggest: "Run `/opsx:analyze` first to complete the analysis."
+- Stop execution
 
-   ```bash
-   openspec instructions summary --change "<name>" --json
-   ```
+### 2. Check audit verdict
 
-   - Executive summary (one page max)
-   - Bottom line answer
-   - 3-5 key findings
-   - Recommendations and caveats
+Read `openspec/changes/<name>/audit.md` and check the Overall Audit Verdict:
+- **Blocker count > 0**: Warn user, ask for confirmation to proceed
+- **Confidence = Low**: Warn user, suggest addressing refinement paths first
+- **Confidence = Medium/High**: Proceed
 
-5. **Generate presentation.html (optional)**
+### 3. Generate summary.md
 
-   Ask user if they want a presentation. If yes, invoke the `openspec-present` skill
-   which handles all presentation logic (frontend-slides check, artifact mapping, etc.).
+```bash
+openspec instructions summary --change "<name>" --json
+```
 
-6. **Ask about delivery channels**
+- Write executive summary (one page max)
+- Lead with bottom line answer
+- Include 3-5 key findings
+- Add recommendations and next steps
+- **MUST include audit findings in Caveats section:**
+  - Copy Audit Confidence level from audit.md
+  - List any bias exposures identified in Phase 2
+  - Document limitations that affect interpretation
 
-   Use **AskUserQuestion**:
-   - "Confluence page"
-   - "Slack message"
-   - "Both"
-   - "Skip sharing"
+Show progress: "Created summary.md"
 
-7. **Execute delivery**
+**Verify audit integration**: Read the generated summary.md and confirm:
+- Audit Confidence is filled in (not blank)
+- Bias considerations are listed (or "None identified")
+- If audit had Medium/Low confidence, this is explained
 
-   **Confluence:** `mcp__atlassian__confluence_create_page`
-   **Slack:** `mcp__plugin_slack_slack__slack_send_message`
+### 4. Generate presentation.html (optional)
 
-8. **Show final status**
+Ask the user if they want a presentation:
 
-**Output**
+> "Do you want to generate an executive slide deck?"
+
+**If yes:** Invoke the `openspec-present` skill, which handles:
+- Checking `frontend-slides` availability
+- Mapping artifacts to slides
+- Generating self-contained HTML
+
+Show progress: "Created presentation.html"
+
+**If no:** Skip and proceed to delivery channels.
+
+### 5. Ask about delivery channels
+
+Use **AskUserQuestion** with options:
+
+> "How would you like to share the findings?"
+> - "Confluence page" - Create/update a Confluence page
+> - "Slack message" - Post summary to a channel
+> - "Both" - Confluence + Slack notification
+> - "Skip sharing" - Keep artifacts locally
+
+### 6. Execute delivery based on user choice
+
+**Confluence:**
+- Use `mcp__atlassian__confluence_create_page` or `mcp__atlassian__confluence_update_page`
+- Include: bottom line, key findings, recommendations
+- Attach presentation.html if it exists
+- Link to full analysis artifacts
+
+**Slack:**
+- Use `mcp__plugin_slack_slack__slack_send_message`
+- Ask user for channel if not obvious
+- Format: Bottom line + Confluence link + key findings
+- Keep it concise
+
+### 7. Show final status
+
+```bash
+openspec status --change "<name>"
+```
+
+---
+
+## Output
 
 ```
 ## Delivery Complete
 
 **Analysis:** <name>
 **Summary:** openspec/changes/<name>/summary.md
+**Presentation:** openspec/changes/<name>/presentation.html (if generated)
 
 ### Shared To:
 - Confluence: <link>
@@ -77,11 +129,17 @@ Deliver the analysis - generate summary, presentation, and share with stakeholde
 
 ---
 
-Run `/opsx:archive` when ready to archive.
+Analysis complete! Run `/opsx:archive` when ready to archive.
 ```
 
-**Guardrails**
-- **NEVER** share if audit has blockers without confirmation
-- **ALWAYS** ask about delivery channels
-- Delegate presentation to `openspec-present` skill
-- Keep Slack messages concise
+---
+
+## Guardrails
+
+- **NEVER** share findings if audit has blockers without user confirmation
+- **NEVER** generate summary without audit findings in Caveats section
+- **ALWAYS** include Audit Confidence level in summary
+- **ALWAYS** ask user about delivery channels - don't auto-post
+- **ALWAYS** keep Slack messages concise - link to Confluence for details
+- Delegate presentation generation to `openspec-present` skill
+- If Confluence/Slack MCP tools fail, save artifacts locally and inform user
