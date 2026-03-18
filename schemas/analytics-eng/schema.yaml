@@ -106,57 +106,137 @@ artifacts:
       The rule is the same as in context: if you find it, you read it, you register it.
       A resource mentioned but not read is not a source — it is a guess.
 
-      ## Step 1: Inspect the DBT Project (ALWAYS FIRST — BLOCKER)
+      ## PRINCIPLE: Static Analysis First, Dynamic Queries Later
 
-      Before querying BigQuery, ask the user about DBT projects:
+      Research follows a strict order:
 
-      > "Is there a DBT project relevant to this analysis? If yes, please:
-      > - Use `/add-dir` to add the project to context, OR
-      > - Tell me the path (e.g., `~/src/project-dbt`)
+      ```
+      1. DBT Project (static)     → code, docs, dependencies from ref()/source()
+      2. Looker Project (static)  → LookML definitions, measure logic
+      3. BigQuery via MCP         → ONLY for gaps not covered by projects
+      4. Lineage via MCP          → complement to DBT lineage, not replacement
+      ```
+
+      **DO NOT skip to MCP before exhausting static analysis.** Project files contain
+      business logic and documentation that explain discrepancies. MCP shows current
+      data state, not the transformations that produced it.
+
+      ---
+
+      ## Step 1: Inspect the DBT Project (HARD BLOCKER)
+
+      **STOP. Ask the user before ANY MCP call:**
+
+      > "Is there a DBT project relevant to this analysis?
+      > - If yes: provide the path or use `/add-dir`
+      > - If no: say 'skip DBT'
       >
-      > If there's no DBT project or it's not relevant, just say 'skip DBT'."
+      > I will NOT query BigQuery until you answer."
 
-      **Wait for the user's response before proceeding.** This is a blocker — do not
-      continue to BigQuery exploration until you have an answer. DBT models often contain
-      the business logic that explains data discrepancies.
+      **This is a hard blocker.** Do not call any BigQuery MCP tool until the user
+      responds. If they provide a DBT project, analyze it FULLY before any MCP calls.
 
-      If a DBT project is provided:
+      ---
 
-      **Project structure:**
-      - Read `dbt_project.yml` — understand naming conventions and model organization
-      - Use Glob to find relevant models: `models/**/*.sql`
+      ### If a DBT project is provided:
+
+      **1. Project structure:**
+      - Read `dbt_project.yml` — naming conventions, model paths, vars
+      - Use Glob: `models/**/*.sql` to find relevant models
       - Identify staging, intermediate, and mart layers
 
-      **For each model that might be relevant:**
-      - Read its SQL file fully — do not skim
-      - Read its schema.yml entry for descriptions, column docs, and tests
-      - Extract: what business logic is encoded, what filters are hardcoded, what `ref()`
-        dependencies it has, what tests define the data contract
-      - Register it in the Source Registry with its path, purpose, and what it contributes
+      **2. For each relevant model (read FULLY, do not skim):**
+      - Read the `.sql` file — extract business logic, filters, hardcoded values
+      - Read the `schema.yml` entry — descriptions, column docs, tests
+      - Register in Source Registry with path, layer, purpose, key logic
 
-      **DBT tests as implicit documentation:**
-      - `accepted_values` → reveals the valid domain of a column
-      - `not_null` + `unique` → reveals grain and key structure
-      - Custom tests → often encode business rules that are not documented elsewhere
+      **3. Extract lineage FROM the DBT project:**
 
-      ## Step 2: Explore BigQuery (fill gaps only)
+      For each relevant model, extract its dependencies:
 
-      After DBT, use BigQuery only for what is NOT already modeled:
+      ```bash
+      # Find ref() dependencies
+      grep -oE "ref\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
+
+      # Find source() dependencies
+      grep -oE "source\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
+      ```
+
+      Document the dependency chain:
+      ```
+      model_name
+      ├── ref('upstream_model_1')
+      ├── ref('upstream_model_2')
+      └── source('source_name', 'table_name')
+      ```
+
+      For each upstream ref(), read that model too and repeat. Stop at sources or
+      when you've traced 2-3 levels deep (enough to understand the transformation chain).
+
+      **Bonus — if `target/manifest.json` exists:** It contains the complete compiled
+      dependency graph. Use it if available, but don't require it.
+
+      **4. DBT tests as implicit documentation:**
+      - `accepted_values` → valid domain of a column
+      - `not_null` + `unique` → grain and key structure
+      - `relationships` → foreign key contracts
+      - Custom tests → business rules not documented elsewhere
+
+      ---
+
+      ## Step 2: Explore BigQuery via MCP (ONLY for gaps)
+
+      **Prerequisite:** Step 1 complete (user answered about DBT).
+
+      Use BigQuery MCP ONLY for tables NOT covered by DBT:
 
       - `mcp__bigquery__list_dataset_ids` — list available datasets
       - `mcp__bigquery__list_table_ids` — list tables in a dataset
       - `mcp__bigquery__get_table_info` — read schema and metadata
       - `mcp__bigquery__execute_sql` — row counts, date ranges, sample rows
 
-      For each table you read, register it. Include: full table path, row count,
-      date range, and what gap it fills that DBT models don't cover.
+      For each table, register it with: full path, row count, date range, and
+      what gap it fills that DBT models don't cover.
 
       Always use the analysis project for queries, not core.
 
-      ## Step 2.5: Get Upstream Lineage (REQUIRED for key tables)
+      ### Error Handling: When BigQuery MCP Fails
 
-      For every table that is central to the analysis, get its upstream lineage using
-      the `bigquery-lineage` skill:
+      If a BigQuery MCP call returns an error (table not found, permission denied, etc.):
+
+      **1. DO NOT immediately mark the source as "inaccessible".**
+
+      **2. Diagnose the error:**
+      - "Not found" → likely wrong project or dataset. Check:
+        - Did you use the correct project ID? (analysis vs core vs prod)
+        - Did you use the correct dataset name?
+        - Is the table name spelled correctly? (check DBT model or source for exact name)
+      - "Permission denied" → you may be querying the wrong project
+      - "Invalid table name" → check for typos, wrong casing, or missing backticks
+
+      **3. Correct and retry:**
+      - If the table exists in DBT, check `dbt_project.yml` for the target project/dataset
+      - If the table is a source, check `sources.yml` for the actual database/schema
+      - Use `mcp__bigquery__list_dataset_ids` to verify available datasets
+      - Use `mcp__bigquery__list_table_ids` to verify the table exists
+
+      **4. Only mark as inaccessible if:**
+      - You've verified the correct path and it still fails
+      - You've confirmed with the user that the table should exist
+      - Document WHY it's inaccessible (permission issue? table deleted? wrong environment?)
+
+      **5. In the Source Registry:**
+      - If error: mark as `❌` with note explaining the error and what you tried
+      - Do not silently skip — failed sources may indicate important data gaps
+
+      ---
+
+      ## Step 2.5: Get Upstream Lineage via MCP (complement to DBT)
+
+      Use `bigquery-lineage` as a COMPLEMENT to DBT lineage, not a replacement:
+
+      - If DBT lineage was extracted → use MCP lineage only to verify or extend
+      - If no DBT project → use MCP lineage as primary source
 
       ```
       /bigquery-lineage <table_name> --depth 3

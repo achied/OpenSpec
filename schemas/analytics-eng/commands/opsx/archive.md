@@ -1,5 +1,5 @@
 ---
-name: "OPSA: Archive"
+name: "OPSX: Archive"
 description: Archive a completed analysis
 category: Analytics
 tags: [analytics, workflow, archive, openspec]

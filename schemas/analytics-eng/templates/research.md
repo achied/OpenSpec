@@ -2,16 +2,40 @@
 
 <!-- Add entries here for every asset read during research.
      Start numbering from where context.md left off.
-     Do NOT re-list sources from context.md — only new ones found here. -->
+     Do NOT re-list sources from context.md — only new ones found here.
 
-| # | Type | Resource | URL / Path | Read? | Key Contribution |
-|---|------|----------|------------|-------|------------------|
+     For FAILED sources (❌): document WHY it failed and what you tried.
+     Do not silently skip — failed sources may indicate important data gaps. -->
+
+| # | Type | Resource | URL / Path | Read? | Key Contribution / Error |
+|---|------|----------|------------|-------|--------------------------|
 | | DBT model | | `models/...` | ✅ / ❌ | |
 | | BigQuery table | | `project.dataset.table` | ✅ / ❌ | |
 | | LookML view | | `views/...` | ✅ / ❌ | |
 | | LookML explore | | `models/...` | ✅ / ❌ | |
 | | Looker dashboard | | | ✅ / ❌ | |
 | | Looker Look | | | ✅ / ❌ | |
+
+---
+
+## DBT Lineage (extracted from code)
+
+<!-- Document ref() and source() dependencies for key models.
+     Prefer this over bigquery-lineage when DBT project is available. -->
+
+### Model: `<!-- model_name -->`
+
+**Dependencies (from code):**
+```
+model_name
+├── ref('...')
+├── ref('...')
+└── source('...', '...')
+```
+
+**Upstream models traced:**
+- `upstream_model_1` → key logic: ...
+- `upstream_model_2` → key logic: ...
 
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: "OPSA: Investigate"
+name: "OPSX: Investigate"
 description: Start a new analysis - create it and generate context + research artifacts
 category: Analytics
 tags: [analytics, workflow, openspec]
