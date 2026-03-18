@@ -96,25 +96,35 @@ Get instructions:
 openspec instructions research --change "<name>" --json
 ```
 
-**First, ask about DBT and Looker projects** (BLOCKER - wait for response):
+**HARD BLOCKER — ask about DBT and Looker projects BEFORE any MCP call:**
 
 > "Do you have a DBT project I should inspect? Path to `dbt_project.yml`?
-> Do you have a Looker project I should inspect? Path to the project folder?"
+> Do you have a Looker project I should inspect? Path to the project folder?
+>
+> I will NOT query BigQuery until you answer."
+
+**Principle: Static analysis FIRST, MCP queries LATER.**
 
 Then follow the instruction to:
-- **Inspect DBT models** if provided:
-  - Read model SQL and document key business logic (filters, calculations, joins)
-  - Identify hardcoded values, business rules encoded in WHERE clauses
+
+- **Inspect DBT models** if provided (BEFORE any MCP):
+  - Read model SQL fully — document business logic, filters, calculations
   - Read schema.yml for tests and documentation
-- **Trace lineage** for key tables (`/bigquery-lineage <table> --depth 3`):
-  - Document the full dependency chain from source to mart
-  - Identify where transformations happen that could affect the analysis
-- **Inspect LookML files** if Looker project provided:
+  - **Extract lineage from code** using `ref()` and `source()` patterns:
+    ```bash
+    grep -oE "ref\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
+    ```
+  - Trace upstream refs 2-3 levels deep to understand transformation chain
+
+- **Inspect LookML files** if Looker project provided (BEFORE any MCP):
   - Read `.view.lkml` files: dimensions, measures, derived tables
   - Read `.model.lkml` files: explores, joins, hidden filters
   - Document `sql_table_name` to understand which BigQuery tables back each view
-  - Look for `sql_always_where`, inner joins, measure filters that affect results
-  - Check derived tables for business logic and materialization strategy
+
+- **THEN use MCP** for gaps not covered by projects:
+  - BigQuery queries for tables not in DBT
+  - `bigquery-lineage` as complement to DBT lineage (not replacement)
+
 - Assess feasibility with understanding of the data transformations
 - Continue the Source Registry from context.md
 

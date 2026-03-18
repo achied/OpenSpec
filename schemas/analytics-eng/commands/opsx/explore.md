@@ -1,5 +1,5 @@
 ---
-name: "OPSA: Explore"
+name: "OPSX: Explore"
 description: "Enter explore mode - think through data questions, investigate sources, clarify requirements"
 category: Analytics
 tags: [analytics, explore, thinking]

@@ -1,5 +1,5 @@
 ---
-name: "OPSA: Deliver"
+name: "OPSX: Deliver"
 description: Generate summary and presentation, share with stakeholders
 category: Analytics
 tags: [analytics, workflow, delivery, openspec]

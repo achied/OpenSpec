@@ -1,5 +1,5 @@
 ---
-name: "OPSA: Analyze"
+name: "OPSX: Analyze"
 description: Execute the analysis - generate plan, analysis, validation, and audit artifacts
 category: Analytics
 tags: [analytics, workflow, openspec]
