@@ -1,14 +1,34 @@
+## Project Map
+
+<!-- CRITICAL: This section is used by /opsx:explore to inherit context.
+     Fill in as you discover projects. Save to auto-memory for future sessions. -->
+
+| Type | Name | Location | Notes |
+|------|------|----------|-------|
+| **BQ Project** | | `<project_id>` | Primary project for queries |
+| **BQ Dataset** | | `<project.dataset>` | Main dataset being analyzed |
+| **DBT Project** | | `<local_path>` | e.g., `~/src/dbt-core/` |
+| **Looker Project** | | `<local_path>` | e.g., `~/src/looker/` |
+| **GitHub Org** | | `<org_name>` | For code search |
+
+**Table → Project Mapping** (add as you discover):
+
+| Table (FQDN) | Source | Code Location |
+|--------------|--------|---------------|
+| `project.dataset.table` | DBT / Looker / Raw | `models/path/` or `views/path/` |
+
+---
+
 ## Source Registry (continued from context.md)
 
 <!-- Add entries here for every asset read during research.
-     Start numbering from where context.md left off.
-     Do NOT re-list sources from context.md — only new ones found here.
+     ALWAYS use FQDN for BigQuery tables (project.dataset.table).
 
      For FAILED sources (❌): document WHY it failed and what you tried.
      Do not silently skip — failed sources may indicate important data gaps. -->
 
-| # | Type | Resource | URL / Path | Read? | Key Contribution / Error |
-|---|------|----------|------------|-------|--------------------------|
+| # | Type | Resource | URL / Path (FQDN) | Read? | Key Contribution / Error |
+|---|------|----------|-------------------|-------|--------------------------|
 | | DBT model | | `models/...` | ✅ / ❌ | |
 | | BigQuery table | | `project.dataset.table` | ✅ / ❌ | |
 | | LookML view | | `views/...` | ✅ / ❌ | |
@@ -18,24 +38,26 @@
 
 ---
 
-## DBT Lineage (extracted from code)
+## Data Lineage (from /bigquery-lineage)
 
-<!-- Document ref() and source() dependencies for key models.
-     Prefer this over bigquery-lineage when DBT project is available. -->
+<!-- Use `/bigquery-lineage` skill to trace dependencies.
+     - Iterative mode: explore one level at a time for complex graphs
+     - Recursive mode: get full tree for simple tables -->
 
-### Model: `<!-- model_name -->`
+### Table: `<!-- project.dataset.table -->`
 
-**Dependencies (from code):**
+**Mode used**: Iterative / Recursive
+
+**Upstream tables:**
 ```
-model_name
-├── ref('...')
-├── ref('...')
-└── source('...', '...')
+target_table
+├── upstream_1 (project.dataset.table)
+│   └── ...
+└── upstream_2 (project.dataset.table)
 ```
 
-**Upstream models traced:**
-- `upstream_model_1` → key logic: ...
-- `upstream_model_2` → key logic: ...
+**Key transformations identified** (after reading DBT model SQL):
+- ...
 
 ---
 
@@ -159,19 +181,12 @@ model_name
 
 ---
 
-## Data Lineage
+## Lineage Summary
+
+<!-- High-level view of the data flow for this analysis -->
 
 ```
 Source System → Raw Tables → DBT Staging → DBT Intermediate → DBT Marts → Looker
 ```
 
-### Key dependency chain for this analysis:
-
-```
-<!-- e.g.:
-mart_retention
-├── int_user_activity
-│   └── stg_events (→ raw.events)
-└── stg_users (→ raw.users)
--->
-```
+**Key insight from lineage**: <!-- What did the lineage reveal about data flow? -->

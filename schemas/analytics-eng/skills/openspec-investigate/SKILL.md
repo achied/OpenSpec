@@ -5,132 +5,87 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.3"
 ---
 
 # Investigate
 
 Start a new analysis - create the change and generate initial artifacts (context + research).
 
-**Artifacts created:**
-- context.md (stakeholder request, business context, sources)
-- research.md (data sources, DBT models, Looker assets, feasibility)
+**Artifacts created:** context.md, research.md
 
 When ready to execute, run `/opsx:analyze`
 
 ---
 
-## Search Discipline
-
-The scope is defined by what the user provides. Do NOT search beyond it.
-
-| Source | User provides | Action |
-|--------|---------------|--------|
-| **Slack** | Link to message | Read message + full thread if exists |
-| **Slack** | Link + time range | Read messages in range + their threads |
-| **Confluence** | Link to page | Read page + linked pages (1 level) |
-| **Looker** | Link to dashboard/Look | Read resource + underlying Explore |
-
-**If context is insufficient** -> ask user for more links, do not search broadly.
-
----
-
-## Input
-
-The input should be an analysis name (kebab-case) OR a description of what the user wants to analyze.
-
-Example: "why do these two reports show different numbers" -> `report-discrepancy-mar-2026`
-
----
-
 ## Steps
 
-### 1. Clarify the analysis (if needed)
+### 1. Clarify the analysis
 
-If no clear input provided, use **AskUserQuestion** (open-ended) to ask:
+If no clear input, use **AskUserQuestion**:
 
-> "What analysis do you want to work on? Describe the question or problem you're investigating."
+> "What analysis do you want to work on?"
 
-From their description, derive a kebab-case name.
+**Options**: Data discrepancy, Metric investigation, Source validation, New analysis, Custom.
 
-**IMPORTANT**: Do NOT proceed without understanding what the user wants to analyze.
+Derive a kebab-case name from their response.
 
-### 2. Ask for specific resources BEFORE creating the change
+### 2. Ask for resources
 
-Use **AskUserQuestion** (open-ended) to ask:
+Use **AskUserQuestion**:
 
-> "What resources should I use for context?
-> - Slack link (I'll read the thread if it has one)
-> - Slack link + time range (I'll read subsequent messages too)
-> - Confluence page or Looker dashboard"
+> "What resources should I use? (Slack link, Confluence page, Looker dashboard, DBT project, BigQuery tables)"
 
-**Wait for the user's response.** The scope of context gathering is defined by what they provide.
+**Wait for response.** Scope is defined by what they provide.
 
-### 3. Create the change directory
+### 3. Create change
 
 ```bash
 openspec new change "<name>" --schema analytics-eng
 ```
 
-This creates a scaffolded change at `openspec/changes/<name>/` with `.openspec.yaml`.
-
 ### 4. Generate context.md
 
-Get instructions:
 ```bash
 openspec instructions context --change "<name>" --json
 ```
 
-Follow the instruction to:
-- Consume every resource the user provided via MCP tools
-- Follow links/references found IN those resources (max 1 level deep)
-- Fill in the Source Registry with every resource read
-- Document stakeholder request, business context, success criteria
+For each resource provided:
+- **Slack**: Read full thread, extract question and decisions
+- **Confluence**: Read page, extract definitions and business logic
+- **Looker**: Read dashboard/Look, extract metrics and filters
 
-Show progress: "Created context.md"
+Register every resource in Source Registry.
 
-### 5. Generate research.md
+### 5. Generate research.md (BLOCKER first)
 
-Get instructions:
 ```bash
 openspec instructions research --change "<name>" --json
 ```
 
-**HARD BLOCKER — ask about DBT and Looker projects BEFORE any MCP call:**
+**HARD BLOCKER — ask BEFORE any MCP call:**
 
-> "Do you have a DBT project I should inspect? Path to `dbt_project.yml`?
-> Do you have a Looker project I should inspect? Path to the project folder?
->
-> I will NOT query BigQuery until you answer."
+> "Where are your DBT/Looker projects? (Local path, GitHub org, or skip)"
 
-**Principle: Static analysis FIRST, MCP queries LATER.**
+If provided: save to auto-memory, fill Project Map in research.md.
 
-Then follow the instruction to:
+If GitHub org: use `gh search code "filename:dbt_project.yml" --owner=<org>`
 
-- **Inspect DBT models** if provided (BEFORE any MCP):
-  - Read model SQL fully — document business logic, filters, calculations
-  - Read schema.yml for tests and documentation
-  - **Extract lineage from code** using `ref()` and `source()` patterns:
-    ```bash
-    grep -oE "ref\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
-    ```
-  - Trace upstream refs 2-3 levels deep to understand transformation chain
+### 6. Research workflow
 
-- **Inspect LookML files** if Looker project provided (BEFORE any MCP):
-  - Read `.view.lkml` files: dimensions, measures, derived tables
-  - Read `.model.lkml` files: explores, joins, hidden filters
-  - Document `sql_table_name` to understand which BigQuery tables back each view
+**Order: Lineage → Code → MCP (only for gaps)**
 
-- **THEN use MCP** for gaps not covered by projects:
-  - BigQuery queries for tables not in DBT
-  - `bigquery-lineage` as complement to DBT lineage (not replacement)
+1. **Find dependencies**: Invoke `/bigquery-lineage` (iterative mode for complex graphs)
+2. **Search code**: For each table found, search in DBT/Looker project by name
+3. **MCP fallback**: Only for tables not in any project
 
-- Assess feasibility with understanding of the data transformations
-- Continue the Source Registry from context.md
+**Cross-project**: If lineage shows external tables, ask about other projects.
 
-Show progress: "Created research.md"
+**Fill as you go:**
+- Project Map (projects and table mappings)
+- Source Registry (every asset read, FQDN for BQ tables)
 
-### 6. Show final status
+### 7. Show status
 
 ```bash
 openspec status --change "<name>"
@@ -138,23 +93,30 @@ openspec status --change "<name>"
 
 ---
 
+## Principles
+
+- **Static first**: Project files before MCP queries
+- **Lineage → Code**: Find dependencies, then read their definitions
+- **FQDN always**: `project.dataset.table` for all BQ references
+- **Scope discipline**: Only search what user provided, ask for more if needed
+
+---
+
 ## Output
 
-After completing artifacts, summarize:
+Summarize:
 - Analysis name and location
-- Key findings from context (stakeholder question, success criteria)
-- Key findings from research (feasibility verdict, key data sources)
-- Prompt: "Run `/opsx:analyze` to design and execute the analysis."
+- Key findings from context (question, success criteria)
+- Key findings from research (feasibility, key sources)
+- Prompt: "Run `/opsx:analyze` to execute."
 
 ---
 
 ## Guardrails
 
-- **NEVER** fabricate context - use MCP tools to read every source
-- **NEVER** skip asking for resources - specific links save time
-- **NEVER** skip the DBT/Looker project question - it's a BLOCKER
-- **NEVER** search broadly - scope is defined by user-provided resources
-- **ALWAYS** wait for user responses to blocking questions
-- **ALWAYS** register every source consumed in the Source Registry
-- If the user provides a Slack link, read the full thread (not just the first message)
-- If feasibility is "Not Feasible", stop and discuss with user before proceeding
+- **NEVER** fabricate context — read every source via MCP
+- **NEVER** skip the DBT/Looker question — it's a BLOCKER
+- **NEVER** search broadly — scope is user-defined
+- **ALWAYS** use FQDN for BigQuery tables
+- **ALWAYS** fill Project Map and Source Registry
+- If feasibility is "Not Feasible", stop and discuss
