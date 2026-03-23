@@ -24,6 +24,15 @@
      - Code Project: local repository path
      - Code Path: relative path to file within project -->
 
+**Linked Datasets** (Analytics Hub):
+
+<!-- If /bigquery-lineage shows "# linked dataset: target -> source", document here.
+     Same dataset appears in both projects - target consumes via Analytics Hub link. -->
+
+| Target Project | Source Project | Dataset | Notes |
+|----------------|----------------|---------|-------|
+| `target-project` | `source-project` | `dataset_name` | Data originates in source |
+
 ---
 
 ## Source Registry (continued from context.md)
@@ -53,23 +62,39 @@
 ## Data Lineage (from /bigquery-lineage)
 
 <!-- Use `/bigquery-lineage` skill to trace dependencies.
-     - Iterative mode: explore one level at a time for complex graphs
-     - Recursive mode: get full tree for simple tables -->
+     Document each source with a Mermaid flowchart. -->
 
 ### Table: `<!-- project.dataset.table -->`
 
-**Mode used**: Iterative / Recursive
-
-**Upstream tables:**
-```
-target_table
-├── upstream_1 (project.dataset.table)
-│   └── ...
-└── upstream_2 (project.dataset.table)
+```mermaid
+flowchart BT
+    A[upstream_1] --> B[target_table]
+    C[upstream_2] --> B
 ```
 
-**Key transformations identified** (after reading DBT model SQL):
-- ...
+**Key transformations:**
+- upstream_1: provides X field
+- upstream_2: provides Y field
+
+<!-- For discrepancies, show comparison: -->
+
+### Lineage Comparison (for discrepancies)
+
+```mermaid
+flowchart BT
+    subgraph "Source A Path"
+        A1[upstream] --> B1[source_a]
+    end
+    subgraph "Source B Path"
+        A2[upstream] --> B2[source_b]
+    end
+    C[shared_ancestor] --> A1
+    C --> A2
+    style C fill:#c8e6c9
+```
+
+**Convergence point:** <!-- shared ancestor or "None (divergent sources)" -->
+**Key difference:** <!-- what causes the discrepancy -->
 
 ---
 
@@ -197,8 +222,12 @@ target_table
 
 <!-- High-level view of the data flow for this analysis -->
 
-```
-Source System → Raw Tables → DBT Staging → DBT Intermediate → DBT Marts → Looker
+```mermaid
+flowchart LR
+    A[Source System] --> B[Raw Tables]
+    B --> C[DBT Staging]
+    C --> D[DBT Marts]
+    D --> E[Looker]
 ```
 
-**Key insight from lineage**: <!-- What did the lineage reveal about data flow? -->
+**Key insight from lineage:** <!-- What did the lineage reveal about data flow? -->
