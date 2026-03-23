@@ -35,6 +35,13 @@ openspec status --change "<name>" --json
 
 Verify context and research are `done`. If not → suggest `/opsx:investigate`.
 
+**Check Source Registry completeness:**
+- Read context.md Source Registry
+- If any source has ⏳ status, it must be either:
+  - ✅ in research.md (update context.md to match)
+  - Explicitly marked as out-of-scope with reason
+- If unresolved ⏳ sources remain → return to `/opsx:investigate`
+
 ### 2. Check feasibility
 
 Read `research.md` Feasibility Verdict:

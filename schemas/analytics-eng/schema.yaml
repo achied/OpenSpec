@@ -1,6 +1,6 @@
 name: analytics-eng
 version: 1
-description: Analytics Engineering workflow - context → research → plan → analysis → validation → audit → summary
+description: Analytics Engineering workflow - context → discover → research → plan → analysis → validation → audit → summary
 skills:
   mode: replace
 commands:
