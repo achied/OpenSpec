@@ -116,6 +116,7 @@ artifacts:
       - **Detailed Findings**: Each finding with:
         - Clear statement of the finding
         - Supporting data (tables, charts)
+        - **SQL query that produces this data** (inline, not just referenced)
         - Confidence level (high/medium/low)
       - **Queries**: All SQL queries used (for reproducibility)
       - **Visualizations**: Links to Looks or embedded charts
@@ -123,6 +124,7 @@ artifacts:
 
       ## Best practices
 
+      - **Every number, table, or metric MUST have its SQL inline** — if you can't show the query, don't show the number
       - Save ALL queries in the document for reproducibility
       - Create Looks for key visualizations that stakeholders can revisit
       - Note data quality issues encountered during analysis
@@ -155,6 +157,8 @@ artifacts:
         If the question was "why did X happen", does the analysis explain causality
         or only describe correlation?
       - **Missing Angles**: What aspects of the original question are NOT covered?
+      - **SQL Coverage**: For each number/table in analysis.md, verify there is a corresponding
+        SQL query. Flag any data point without SQL as "Unverifiable".
       - **Stakeholder Verification Points**: Findings where business interpretation
         requires stakeholder confirmation.
 
@@ -179,6 +183,7 @@ artifacts:
       ## Sections to document
 
       ### Phase 1: SQL Forensics
+      - **Coverage check**: Identify any number, table, or metric without a corresponding SQL query — mark as Blocker
       - Re-run each query independently
       - Compare results to numbers cited in findings
       - Document: exact match, rounding difference, or mismatch

@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "1.3"
 ---
 
 # Deliver
@@ -73,10 +73,12 @@ Ask the user if they want a presentation:
 
 > "Do you want to generate an executive slide deck?"
 
-**If yes:** Invoke the `openspec-present` skill, which handles:
-- Checking `frontend-slides` availability
-- Mapping artifacts to slides
-- Generating self-contained HTML
+**If yes:**
+```bash
+openspec instructions presentation --change "<name>" --json
+```
+
+Invoke `frontend-slides` skill. If not available, inform user and continue with summary only.
 
 Show progress: "Created presentation.html"
 
@@ -129,17 +131,16 @@ openspec status --change "<name>"
 
 ---
 
-Analysis complete! Run `/opsx:archive` when ready to archive.
+Analysis complete and delivered.
 ```
 
 ---
 
 ## Guardrails
 
-- **NEVER** share findings if audit has blockers without user confirmation
-- **NEVER** generate summary without audit findings in Caveats section
-- **ALWAYS** include Audit Confidence level in summary
-- **ALWAYS** ask user about delivery channels - don't auto-post
-- **ALWAYS** keep Slack messages concise - link to Confluence for details
-- Delegate presentation generation to `openspec-present` skill
-- If Confluence/Slack MCP tools fail, save artifacts locally and inform user
+- Verify audit is complete before generating summary
+- Warn user and ask confirmation if audit has blockers or low confidence
+- Include audit findings and caveats in summary — do not hide limitations
+- Ask user about delivery channels before posting
+- Keep Slack messages concise — link to Confluence for details
+- Confirm before sending any external messages

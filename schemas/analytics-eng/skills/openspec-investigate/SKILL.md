@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.3"
+  version: "1.6"
 ---
 
 # Investigate
@@ -18,25 +18,34 @@ When ready to execute, run `/opsx:analyze`
 
 ---
 
+## Input
+
+- A data question or discrepancy to investigate
+- Resources provided by the user (Slack, Confluence, Looker, tables)
+- Or nothing (will ask for clarification)
+
+---
+
 ## Steps
 
-### 1. Clarify the analysis
+### 1. Clarify the analysis (REQUIRED)
 
-If no clear input, use **AskUserQuestion**:
+**STOP and ask** using AskUserQuestion:
 
 > "What analysis do you want to work on?"
+> Options: Data discrepancy, Metric investigation, Source validation, New analysis, Custom.
 
-**Options**: Data discrepancy, Metric investigation, Source validation, New analysis, Custom.
+**Wait for user response.** Do not proceed until answered.
 
 Derive a kebab-case name from their response.
 
-### 2. Ask for resources
+### 2. Ask for resources (REQUIRED)
 
-Use **AskUserQuestion**:
+**STOP and ask** using AskUserQuestion:
 
 > "What resources should I use? (Slack link, Confluence page, Looker dashboard, DBT project, BigQuery tables)"
 
-**Wait for response.** Scope is defined by what they provide.
+**Wait for user response.** Do not proceed until answered. Scope is defined by what they provide.
 
 ### 3. Create change
 
@@ -50,55 +59,161 @@ openspec new change "<name>" --schema analytics-eng
 openspec instructions context --change "<name>" --json
 ```
 
-For each resource provided:
-- **Slack**: Read full thread, extract question and decisions
-- **Confluence**: Read page, extract definitions and business logic
-- **Looker**: Read dashboard/Look, extract metrics and filters
+**Purpose: Understand THE QUESTION and identify resources for research.**
 
-Register every resource in Source Registry.
+- Extract the question, who asked, why it matters, success criteria
+- **Identify ALL resources mentioned** — be thorough:
+  - Explicit table/model names
+  - Indirect references ("the X table", "X data") → infer or ask
+  - Partial names → register with note to clarify
+- Register them in Source Registry:
+  - Resources you read: ✅ with key contribution
+  - Resources mentioned but not yet read: ⏳ pending for research
 
-### 5. Generate research.md (BLOCKER first)
+Don't analyze data logic yet — that's for research.
+
+**Show progress:** "Created context.md. Now starting research phase."
+
+### 5. Locate and map resources (REQUIRED before research)
+
+**For each table/model identified in context.md, invoke `/locate` first.**
+
+If `/locate` can't find the table, **ask** using AskUserQuestion:
+
+> "For `<resource_name>`, which project contains this model?
+> - DBT project name/path
+> - Looker project name/path
+> - Skip (no local code available)"
+
+**Wait for user response.** Do not proceed until answered for each resource.
+
+**If BQ project is not clear** (DBT and Looker can materialize to different BQ projects):
+
+> "I found `<model>` in `<DBT|Looker>` project `<path>`. Which BQ project does it materialize to? (project.dataset)"
+
+**Do not assume BQ project.** Wrong project = wrong lineage = wrong analysis.
+
+**Before proceeding to step 6, verify ALL FQDNs are complete.**
+If any FQDN has `?` or is missing the BQ project, STOP and ask:
+> "I couldn't determine the BQ project for `<table>`. Which project does it materialize to?"
+
+Do NOT proceed with incomplete FQDNs — lineage will fail.
+
+Fill **Table → Project Mapping** in research.md:
+
+```
+| Table Name | BQ FQDN | Source Type | Code Project | Code Path |
+|------------|---------|-------------|--------------|-----------|
+| dim_customer | bq-prod.core.dim_customer | DBT | ~/src/dbt-core | models/core/dim_customer.sql |
+```
+
+### 6. Generate research.md
 
 ```bash
 openspec instructions research --change "<name>" --json
 ```
 
-**HARD BLOCKER — ask BEFORE any MCP call:**
+**Show progress:** "Created research.md. Now tracing data lineage."
 
-> "Where are your DBT/Looker projects? (Local path, GitHub org, or skip)"
+### 7. Research sources (with task tracking)
 
-If provided: save to auto-memory, fill Project Map in research.md.
+**Execute tasks SEQUENTIALLY — one at a time.**
+Do NOT start a new task until the current one is completed.
+Do NOT read/query resources assigned to other tasks.
 
-If GitHub org: use `gh search code "filename:dbt_project.yml" --owner=<org>`
+**For each source in Project Map:**
 
-### 6. Research workflow
+#### 7a. Create Task
 
-**Order: Lineage → Code → MCP (only for gaps)**
+```
+TaskCreate:
+  subject: "Research: <source_name>"
+  description: "Trace lineage and analyze code"
+  activeForm: "Researching <source_name>"
+```
 
-1. **Find dependencies**: Invoke `/bigquery-lineage` (iterative mode for complex graphs)
-2. **Search code**: For each table found, search in DBT/Looker project by name
-3. **MCP fallback**: Only for tables not in any project
+TaskUpdate: status → `in_progress`
 
-**Cross-project**: If lineage shows external tables, ask about other projects.
+#### 7b. Trace lineage (REQUIRED - use /bigquery-lineage)
 
-**Fill as you go:**
-- Project Map (projects and table mappings)
-- Source Registry (every asset read, FQDN for BQ tables)
+**Use the Skill tool to invoke `/bigquery-lineage`** with the FQDN:
 
-### 7. Show status
+```
+Skill: /bigquery-lineage
+Input: <FQDN from Project Map>
+```
+
+Do NOT extract lineage from code. Do NOT skip this step.
+
+Purpose:
+- **Verify**: Confirm lineage identified from DBT code matches actual BigQuery state
+- **Enrich**: Discover dependencies not visible in code (sources, external tables, cross-project refs)
+
+**Depth is required for ALL analysis types.** Go 3-4 levels deep minimum.
+
+| Analysis type | Depth goal | Stop when |
+|---------------|------------|-----------|
+| Data discrepancy | Find where sources meet or split | Convergence/divergence point found |
+| Metric investigation | Trace full calculation path | Every component understood |
+| Source validation | Trace to raw source | Origin system identified |
+| New analysis | Map the data model | Relationships documented |
+
+**For discrepancies — trace to TRUE convergence or divergence:**
+- Trace EACH source's lineage independently
+- If sources have different immediate upstreams → **keep tracing those upstreams**
+- Stop ONLY when you find:
+  - **Convergence**: A shared ancestor (even if 4-5 levels up)
+  - **Divergence**: Completely separate origin systems (no shared ancestor exists)
+- Document the full path from each source to the convergence/divergence point
+- This is the ROOT CAUSE of the discrepancy — don't skip it
+
+#### 7c. Analyze code
+
+**Read the code fully** — don't skim:
+- Extract ALL field definitions relevant to the analysis
+- Document filters, WHERE clauses, JOIN conditions
+- Identify business logic encoded in SQL
+
+**Don't stop at first impressions:**
+- If something seems off, explore alternative interpretations
+- Open multiple analysis paths if logic is ambiguous
+- Document uncertainties for the analysis phase
+
+#### 7d. Document and complete
+
+- **Document findings** in research.md BEFORE moving to next source
+- **Keep sources clearly separated** to avoid mixing findings
+- **Verify task is fully complete** (lineage traced, code analyzed, findings documented)
+- TaskUpdate: status → `completed`
+- Do NOT start next task until this one shows `completed`
+
+**For NEW dependencies found:**
+- Repeat step 5 (locate + confirm FQDN)
+- Then repeat from 7b for the new dependency
+
+### 8. Show status and next step
 
 ```bash
 openspec status --change "<name>"
 ```
 
+**Always end with:**
+> "Investigation complete. Run `/opsx:analyze` when ready to execute the analysis."
+
 ---
 
 ## Principles
 
-- **Static first**: Project files before MCP queries
-- **Lineage → Code**: Find dependencies, then read their definitions
-- **FQDN always**: `project.dataset.table` for all BQ references
-- **Scope discipline**: Only search what user provided, ask for more if needed
+- **Locate → Lineage → Code**: First find source (`/locate`), then dependencies (`/bigquery-lineage`), then read code
+- **Recursive exploration**: For each dependency found, repeat the cycle (locate → lineage → code)
+- **Track with Tasks**: Create a Task for each source — update status as you progress
+- **Depth over speed**: Go 3-4 levels deep. Don't stop at first impressions. Applies to ALL analysis types.
+- **One source at a time**: Complete and document each source before starting the next
+- **Type-specific goals**: Each analysis type has a depth goal — trace until that goal is met
+- **Ask, don't guess**: If table/FQDN is unclear, ask the user
+- **Tool priority**: Skills first (`/locate`, `/bigquery-lineage`), then project files (yml, lkml), then BigQuery MCP (`search_catalog`, `execute_sql`, `get_table_info`) only for gaps
+- **Resource inspection**: When you encounter a link or resource reference, identify its type and use the appropriate tool to inspect it — don't just note it, read it
+- **Fill as you go**: Update Project Map and Source Registry as you discover resources
 
 ---
 
@@ -114,9 +229,10 @@ Summarize:
 
 ## Guardrails
 
-- **NEVER** fabricate context — read every source via MCP
-- **NEVER** skip the DBT/Looker question — it's a BLOCKER
-- **NEVER** search broadly — scope is user-defined
-- **ALWAYS** use FQDN for BigQuery tables
-- **ALWAYS** fill Project Map and Source Registry
-- If feasibility is "Not Feasible", stop and discuss
+- Base every claim on content you've actually read
+- Ask about DBT/Looker projects before starting research
+- Search only within user-provided scope — ask for more if needed
+- Use FQDN (`project.dataset.table`) for all BigQuery references
+- **Never leave `?` in FQDN** — always ask to resolve before continuing
+- Update Project Map and Source Registry as you discover resources
+- Stop and discuss with user if feasibility is "Not Feasible"

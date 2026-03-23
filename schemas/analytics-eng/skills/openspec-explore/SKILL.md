@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.3"
+  version: "1.5"
 ---
 
 # Explore Mode
@@ -45,8 +45,8 @@ openspec list --json
 ```
 
 **If analysis exists, inherit context from research.md:**
-- Read Project Map (BQ project, DBT path, Looker path)
-- Read table mappings
+- Read Project Map (projects section)
+- Read Table → Project Mapping (Table Name, BQ FQDN, Source Type, Code Project, Code Path)
 - Use this context for all queries and searches
 
 **If no analysis**: Ask for DBT/Looker project location if needed.
@@ -55,11 +55,12 @@ openspec list --json
 
 ## Dependency Discovery
 
-**Order: Lineage → Code**
+**Order: Locate → Lineage → Code**
 
-1. **Find dependencies**: `/bigquery-lineage` (iterative mode)
-2. **Search code**: For each table found, search by name in DBT/Looker project
-3. **Read definitions**: Understand business logic from code
+1. **Locate source**: Invoke `/locate` to find code path and FQDN
+2. **If not found**: Use BigQuery MCP `search_catalog` to find `project.dataset.table`
+3. **Get lineage**: `/bigquery-lineage` (iterative mode)
+4. **Read code**: Understand business logic from DBT/Looker files
 
 If tables outside current project → ask about other projects.
 
@@ -96,7 +97,7 @@ If tables outside current project → ask about other projects.
 
 ## Guardrails
 
-- **Don't execute** — Query and explore, don't write conclusions
-- **Don't lose context** — Read Project Map from research.md first
-- **Do use FQDN** — Always `project.dataset.table`
-- **Do update** — Add discoveries to research.md and auto-memory
+- Query and explore freely, but save conclusions for `/opsx:analyze`
+- Read Project Map from research.md first if analysis exists
+- Use FQDN (`project.dataset.table`) for all BigQuery references
+- Add discoveries to research.md and auto-memory as you go

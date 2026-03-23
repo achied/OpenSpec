@@ -13,28 +13,40 @@
 
 **Table → Project Mapping** (add as you discover):
 
-| Table (FQDN) | Source | Code Location |
-|--------------|--------|---------------|
-| `project.dataset.table` | DBT / Looker / Raw | `models/path/` or `views/path/` |
+| Table Name | BQ FQDN | Source Type | Code Project | Code Path |
+|------------|---------|-------------|--------------|-----------|
+| `table_name` | `project.dataset.table` | DBT / Looker / Raw | `~/src/project/` | `models/path/file.sql` |
+
+<!-- Column guide:
+     - Table Name: short name for reference
+     - BQ FQDN: full BigQuery path (project.dataset.table) where it materializes
+     - Source Type: DBT / Looker / Raw
+     - Code Project: local repository path
+     - Code Path: relative path to file within project -->
 
 ---
 
 ## Source Registry (continued from context.md)
 
 <!-- Add entries here for every asset read during research.
-     ALWAYS use FQDN for BigQuery tables (project.dataset.table).
+     Use the appropriate column for each resource type.
 
      For FAILED sources (❌): document WHY it failed and what you tried.
      Do not silently skip — failed sources may indicate important data gaps. -->
 
-| # | Type | Resource | URL / Path (FQDN) | Read? | Key Contribution / Error |
-|---|------|----------|-------------------|-------|--------------------------|
-| | DBT model | | `models/...` | ✅ / ❌ | |
-| | BigQuery table | | `project.dataset.table` | ✅ / ❌ | |
-| | LookML view | | `views/...` | ✅ / ❌ | |
-| | LookML explore | | `models/...` | ✅ / ❌ | |
-| | Looker dashboard | | | ✅ / ❌ | |
-| | Looker Look | | | ✅ / ❌ | |
+| # | Type | Resource | URL | Code Path | FQDN | Status | Key Contribution / Error |
+|---|------|----------|-----|-----------|------|--------|--------------------------|
+| | DBT model | | | `models/...` | | ✅ / ❌ | |
+| | BigQuery table | | | | `project.dataset.table` | ✅ / ❌ | |
+| | LookML view | | | `views/...` | | ✅ / ❌ | |
+| | LookML explore | | | `explores/...` | | ✅ / ❌ | |
+| | Looker dashboard | | `https://...` | | | ✅ / ❌ | |
+| | Looker Look | | `https://...` | | | ✅ / ❌ | |
+
+<!-- Column guide:
+     - URL: Web resources (Slack, Confluence, Looker dashboards/looks)
+     - Code Path: Local files (DBT models, LookML views/explores)
+     - FQDN: BigQuery tables (project.dataset.table) -->
 
 ---
 
