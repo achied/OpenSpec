@@ -13,80 +13,28 @@ artifacts:
     instruction: |
       Create the context document that captures WHY this analysis is needed and WHAT question we're answering.
 
-      ## FIRST: Ask for specific resources
+      ## How to consume resources
 
-      Before doing any generic searches, ask the user for specific resources:
+      For each resource provided, read its content fully and extract what's relevant:
+      - **Slack**: Who said what, what question was raised, what decisions or hypotheses
+      - **Confluence**: Definitions, prior analyses, business logic, KPI definitions
+      - **Looker**: What question it answers, which Explores it uses, filters applied
 
-      > "Do you have any specific resources for this analysis? For example:
-      > - A Slack thread link (e.g., `https://company.slack.com/archives/C.../p...`)
-      > - A channel + date range (e.g., `#data-questions, last week`)
-      > - A DM or group conversation
-      > - A Confluence page or Looker dashboard
-      >
-      > If not, I'll search broadly — but specific links help me find the right context faster."
-
-      **Wait for the user's response before proceeding.** If they provide specific resources,
-      consume those first. If they say "search broadly" or don't have specific resources,
-      then proceed with generic searches.
-
-      ## CRITICAL: Consume every resource the user provides
-
-      If the user gives you any link, URL, channel name, dashboard name, or document reference
-      — even in passing — you MUST read its content before writing context.md. Do not summarize
-      from memory. Do not paraphrase the link title. Open it, read it, extract what's relevant.
-
-      **For each resource provided:**
-
-      - **Slack links or channel references**:
-        Use `mcp__plugin_slack_slack__slack_search_public` to find the thread, then read the
-        full thread content. Extract: who said what, what question was raised, what decisions
-        or hypotheses were stated, what data was referenced. Do not stop at the first message.
-
-      - **Confluence links or page names**:
-        Use `mcp__atlassian__confluence_search` to find the page, then `mcp__atlassian__confluence_get_page`
-        to read its full content. Extract: relevant definitions, prior analyses, documented
-        business logic, or KPI definitions that are relevant to the question.
-
-      - **Looker dashboard or Look links**:
-        Use `mcp__bigquery__looker_get_dashboards` or `mcp__bigquery__looker_get_looks` to
-        retrieve the asset. Read what metrics, dimensions, and filters it uses. Extract:
-        what question it was built to answer, which Explores it queries, what time windows
-        it uses. This tells you what already exists analytically.
-
-      - **Any other URL**:
-        Fetch and read the content. Do not assume you know what it says.
-
-      After reading each resource, register it in the **Source Registry** (see template).
-      A resource is only "consumed" when it has an entry in the Source Registry with a
-      summary of what it contributed to understanding the question.
-
-      ## Gather additional context proactively
-
-      Beyond resources the user explicitly provides, search for more:
-      - **Slack**: Search for discussions mentioning key terms from the question
-        (`mcp__plugin_slack_slack__slack_search_public`)
-      - **Confluence**: Search for documentation on the relevant domain
-        (`mcp__atlassian__confluence_search`)
-      - **Looker**: Check for existing dashboards on the topic
-        (`mcp__bigquery__looker_get_dashboards`)
-
-      Apply the same rule: if you find something relevant, read it and register it.
+      Register every resource in the **Source Registry**. A resource is only "consumed"
+      when it has an entry with a summary of what it contributed.
 
       ## Sections to document
 
       - **Stakeholder Request**: The original question or hypothesis. Who asked? What triggered this?
         Quote the exact phrasing if possible.
       - **Business Context**: Why does this matter? What decisions will this inform?
-      - **Source Registry**: Every resource consumed — see template for format. This is mandatory.
-      - **Key Facts Extracted**: Concrete facts, numbers, definitions, or hypotheses extracted
-        from sources. These become the assumptions and constraints for Research and Plan.
+      - **Source Registry**: Every resource consumed — see template for format. Mandatory.
+      - **Key Facts Extracted**: Concrete facts, numbers, definitions from sources.
+        These become the assumptions and constraints for Research and Plan.
       - **Success Criteria**: How will we know the analysis answered the question?
-      - **Constraints**: Timeline, data access limitations, known data quality issues surfaced
-        from sources.
+      - **Constraints**: Timeline, data access limitations, known data quality issues.
 
       Keep it focused on understanding the "why". Data exploration comes in Research.
-      The Source Registry in this document is the single source of truth for what was read —
-      Research will reference and extend it, not duplicate it.
     requires: []
 
   - id: research
@@ -96,262 +44,31 @@ artifacts:
     instruction: |
       Explore available data sources to assess feasibility of the analysis.
 
-      ## CRITICAL: Continue the Source Registry from context.md
+      ## Source Registry
 
-      context.md contains a Source Registry of everything consumed during context gathering.
-      Research EXTENDS that registry — it does not start a new one. Every new asset you read
-      in this phase (DBT model, BigQuery table, Looker Explore, dashboard, Look) must be
-      added as an entry to the Source Registry in research.md.
-
-      The rule is the same as in context: if you find it, you read it, you register it.
+      Continue the Source Registry from context.md — every asset you read (DBT model,
+      BigQuery table, Looker Explore, dashboard, Look) must be registered.
       A resource mentioned but not read is not a source — it is a guess.
-
-      ## PRINCIPLE: Static Analysis First, Dynamic Queries Later
-
-      Research follows a strict order:
-
-      ```
-      1. DBT Project (static)     → code, docs, dependencies from ref()/source()
-      2. Looker Project (static)  → LookML definitions, measure logic
-      3. BigQuery via MCP         → ONLY for gaps not covered by projects
-      4. Lineage via MCP          → complement to DBT lineage, not replacement
-      ```
-
-      **DO NOT skip to MCP before exhausting static analysis.** Project files contain
-      business logic and documentation that explain discrepancies. MCP shows current
-      data state, not the transformations that produced it.
-
-      ---
-
-      ## Step 1: Inspect the DBT Project (HARD BLOCKER)
-
-      **STOP. Ask the user before ANY MCP call:**
-
-      > "Is there a DBT project relevant to this analysis?
-      > - If yes: provide the path or use `/add-dir`
-      > - If no: say 'skip DBT'
-      >
-      > I will NOT query BigQuery until you answer."
-
-      **This is a hard blocker.** Do not call any BigQuery MCP tool until the user
-      responds. If they provide a DBT project, analyze it FULLY before any MCP calls.
-
-      ---
-
-      ### If a DBT project is provided:
-
-      **1. Project structure:**
-      - Read `dbt_project.yml` — naming conventions, model paths, vars
-      - Use Glob: `models/**/*.sql` to find relevant models
-      - Identify staging, intermediate, and mart layers
-
-      **2. For each relevant model (read FULLY, do not skim):**
-      - Read the `.sql` file — extract business logic, filters, hardcoded values
-      - Read the `schema.yml` entry — descriptions, column docs, tests
-      - Register in Source Registry with path, layer, purpose, key logic
-
-      **3. Extract lineage FROM the DBT project:**
-
-      For each relevant model, extract its dependencies:
-
-      ```bash
-      # Find ref() dependencies
-      grep -oE "ref\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
-
-      # Find source() dependencies
-      grep -oE "source\s*\(\s*['\"][^'\"]+['\"]" models/path/to/model.sql
-      ```
-
-      Document the dependency chain:
-      ```
-      model_name
-      ├── ref('upstream_model_1')
-      ├── ref('upstream_model_2')
-      └── source('source_name', 'table_name')
-      ```
-
-      For each upstream ref(), read that model too and repeat. Stop at sources or
-      when you've traced 2-3 levels deep (enough to understand the transformation chain).
-
-      **Bonus — if `target/manifest.json` exists:** It contains the complete compiled
-      dependency graph. Use it if available, but don't require it.
-
-      **4. DBT tests as implicit documentation:**
-      - `accepted_values` → valid domain of a column
-      - `not_null` + `unique` → grain and key structure
-      - `relationships` → foreign key contracts
-      - Custom tests → business rules not documented elsewhere
-
-      ---
-
-      ## Step 2: Explore BigQuery via MCP (ONLY for gaps)
-
-      **Prerequisite:** Step 1 complete (user answered about DBT).
-
-      Use BigQuery MCP ONLY for tables NOT covered by DBT:
-
-      - `mcp__bigquery__list_dataset_ids` — list available datasets
-      - `mcp__bigquery__list_table_ids` — list tables in a dataset
-      - `mcp__bigquery__get_table_info` — read schema and metadata
-      - `mcp__bigquery__execute_sql` — row counts, date ranges, sample rows
-
-      For each table, register it with: full path, row count, date range, and
-      what gap it fills that DBT models don't cover.
-
-      Always use the analysis project for queries, not core.
-
-      ### Error Handling: When BigQuery MCP Fails
-
-      If a BigQuery MCP call returns an error (table not found, permission denied, etc.):
-
-      **1. DO NOT immediately mark the source as "inaccessible".**
-
-      **2. Diagnose the error:**
-      - "Not found" → likely wrong project or dataset. Check:
-        - Did you use the correct project ID? (analysis vs core vs prod)
-        - Did you use the correct dataset name?
-        - Is the table name spelled correctly? (check DBT model or source for exact name)
-      - "Permission denied" → you may be querying the wrong project
-      - "Invalid table name" → check for typos, wrong casing, or missing backticks
-
-      **3. Correct and retry:**
-      - If the table exists in DBT, check `dbt_project.yml` for the target project/dataset
-      - If the table is a source, check `sources.yml` for the actual database/schema
-      - Use `mcp__bigquery__list_dataset_ids` to verify available datasets
-      - Use `mcp__bigquery__list_table_ids` to verify the table exists
-
-      **4. Only mark as inaccessible if:**
-      - You've verified the correct path and it still fails
-      - You've confirmed with the user that the table should exist
-      - Document WHY it's inaccessible (permission issue? table deleted? wrong environment?)
-
-      **5. In the Source Registry:**
-      - If error: mark as `❌` with note explaining the error and what you tried
-      - Do not silently skip — failed sources may indicate important data gaps
-
-      ---
-
-      ## Step 2.5: Get Upstream Lineage via MCP (complement to DBT)
-
-      Use `bigquery-lineage` as a COMPLEMENT to DBT lineage, not a replacement:
-
-      - If DBT lineage was extracted → use MCP lineage only to verify or extend
-      - If no DBT project → use MCP lineage as primary source
-
-      ```
-      /bigquery-lineage <table_name> --depth 3
-      ```
-
-      Use depth 3-5 depending on complexity. This reveals:
-      - What raw/source tables feed into the table
-      - Intermediate transformations
-      - Potential points where data could diverge between sources
-
-      When comparing multiple data sources, get lineage for each and document where
-      their pipelines diverge. This often explains discrepancies.
-
-      Register lineage findings in the Source Registry and document in the Data Lineage section.
-
-      ## Step 3: Inspect the Looker Project (if provided — BLOCKER)
-
-      Ask the user about Looker projects:
-
-      > "Is there a Looker project I should inspect? If yes, please:
-      > - Use `/add-dir` to add the project to context, OR
-      > - Tell me the path (e.g., `~/src/company-looker`)
-      >
-      > If there's no Looker project or it's not relevant, just say 'skip Looker project'."
-
-      **Wait for the user's response before proceeding.** This is a blocker — Looker projects
-      contain measure definitions, derived tables, and business logic that explain how metrics
-      are calculated. Without reading the LookML, you're guessing at definitions.
-
-      If a Looker project is provided:
-
-      **Project structure:**
-      - Read `manifest.lkml` if present — understand project name, includes, localizations
-      - Use Glob to find views: `**/*.view.lkml`
-      - Use Glob to find models: `**/*.model.lkml`
-      - Use Glob to find explores: `**/*.explore.lkml` (if separate from models)
-
-      **For each view that might be relevant:**
-      - Read the full `.view.lkml` file — do not skim
-      - Extract `sql_table_name` — which BigQuery table does this view sit on?
-      - For each dimension:
-        - What's the `sql` definition? Is it a direct column or a calculation?
-        - Are there `case` statements encoding business logic?
-        - What `type` is it? (especially `yesno`, `tier`, `duration`)
-      - For each measure:
-        - What's the `type` (count, sum, average, count_distinct, etc.)?
-        - What's the `sql` definition? Especially look for:
-          - Filters in the measure (`filters: [field: "value"]`)
-          - Conditional aggregations (`sql: CASE WHEN ... END`)
-          - References to other measures (`${other_measure}`)
-        - What `drill_fields` are defined? These reveal intended analysis paths
-      - For derived tables:
-        - Read the full `derived_table` block
-        - Is it `sql:` based or `explore_source:` based?
-        - What's the materialization strategy? (persisted, triggered, etc.)
-        - This is often where complex business logic lives
-      - Register each view in the Source Registry with: path, base table, key measures/dimensions
-
-      **For each model/explore that might be relevant:**
-      - Read the `.model.lkml` or explore definition
-      - Extract the base view (`from:`) and all joins
-      - For each join:
-        - What's the `relationship`? (one_to_one, many_to_one, one_to_many, many_to_many)
-        - What's the `sql_on` condition?
-        - Is it `type: left_outer` or `type: inner`? Inner joins can silently exclude records
-      - Are there `always_filter` or `conditionally_filter` blocks? These affect all queries
-      - Are there `access_filter` blocks? These restrict data by user
-      - Register in Source Registry with: explores defined, joins, filters applied
-
-      **LookML patterns that explain discrepancies:**
-      - `sql_always_where` in explores → hidden filters affecting all queries
-      - `cancel_grouping_fields` → affects how measures aggregate
-      - `fanout` warnings → 1:N joins that can inflate counts
-      - `symmetric_aggregates` → Looker's handling of fanout
-      - Derived tables with hardcoded date filters → data freshness issues
-
-      ## Step 4: Read Looker Assets via API — do not just list them
-
-      Use Looker tools to find existing analytics on this topic:
-      - `mcp__bigquery__looker_get_explores` — find relevant Explores
-      - `mcp__bigquery__looker_get_dashboards` — find existing dashboards
-      - `mcp__bigquery__looker_get_looks` — find existing Looks
-
-      For each Explore, dashboard, or Look that is relevant:
-      - Read its content (dimensions, measures, filters, time windows)
-      - Extract: what question it was built to answer, which metrics it defines,
-        what Explores it uses, what filters or date ranges are applied
-      - Assess: can the analysis question be answered by running or adapting this asset?
-        If yes, this is a reusable asset and should be flagged as such
-      - Register it in the Source Registry
-
-      Do not create a new Look or dashboard in this phase. Research is read-only.
-
-      ## Feasibility assessment
-
-      After reading everything, make a clear call:
-
-      - **Feasible**: The question can be answered with existing DBT models or Looker assets.
-        No new modeling required.
-      - **Partially Feasible**: The question can be partially answered. Document exactly what
-        is available and what is missing.
-      - **Not Feasible**: Critical data is absent. Document this clearly before proceeding.
-        Raise with stakeholder before continuing to Plan.
 
       ## Sections to document
 
       - **Source Registry** (continuation from context.md): Every asset read in this phase
+      - **Data Lineage**: Document upstream dependencies using bigquery-lineage output
       - **DBT Models Identified**: Relevant models with path, layer, purpose, key logic
       - **LookML Project** (if inspected): Views, explores, joins, hidden filters, derived tables
       - **Reusable Looker Assets** (via API): Existing dashboards, Looks that cover the topic
       - **Data Sources Identified**: Raw tables or datasets not yet modeled in DBT
       - **Data Quality Assessment**: Completeness, freshness, known issues per source
       - **Feasibility Verdict**: Feasible / Partially Feasible / Not Feasible with justification
-      - **Data Lineage**: Source system → raw → DBT staging → intermediate → mart → Looker
       - **Gaps**: What data or modeling is missing? What would need to be built?
+
+      ## Feasibility assessment
+
+      After reading everything, make a clear call:
+
+      - **Feasible**: The question can be answered with existing DBT models or Looker assets.
+      - **Partially Feasible**: The question can be partially answered. Document what's missing.
+      - **Not Feasible**: Critical data is absent. Raise with stakeholder before continuing.
 
       **Quality Gate**: If feasibility is Partially Feasible or Not Feasible, stop and
       discuss gaps with the stakeholder before writing the Plan.
@@ -365,7 +82,8 @@ artifacts:
     instruction: |
       Design the analysis approach based on the question and available data.
 
-      Sections:
+      ## Sections to document
+
       - **Objectives**: Specific, measurable goals. What metrics will answer the question?
       - **Methodology**: Analytical approach (cohort analysis, funnel, regression, etc.)
       - **Metrics Definition**: Clear definitions for each metric, including:
@@ -392,23 +110,21 @@ artifacts:
     instruction: |
       Execute the analysis plan and document findings with supporting evidence.
 
-      Use BigQuery and Looker for analysis:
-      - `mcp__bigquery__execute_sql` - Run analytical queries
-      - `mcp__bigquery__looker_query` - Query through Looker Explores
-      - `mcp__bigquery__looker_make_look` - Create saved Looks for key visualizations
-      - `mcp__bigquery__looker_make_dashboard` - Create dashboards if needed
+      ## Sections to document
 
-      Sections:
       - **Executive Finding**: One paragraph summary - what's the answer?
       - **Detailed Findings**: Each finding with:
         - Clear statement of the finding
         - Supporting data (tables, charts)
+        - **SQL query that produces this data** (inline, not just referenced)
         - Confidence level (high/medium/low)
       - **Queries**: All SQL queries used (for reproducibility)
       - **Visualizations**: Links to Looks or embedded charts
       - **Unexpected Discoveries**: Notable patterns not directly answering the question
 
-      Best practices:
+      ## Best practices
+
+      - **Every number, table, or metric MUST have its SQL inline** — if you can't show the query, don't show the number
       - Save ALL queries in the document for reproducibility
       - Create Looks for key visualizations that stakeholders can revisit
       - Note data quality issues encountered during analysis
@@ -431,26 +147,23 @@ artifacts:
       | Did we answer the right question? | Is the answer correct? |
       | Maps findings → success criteria | Verifies SQL and numbers |
       | Checks narrative alignment | Checks technical rigor |
-      | "Are we solving the right problem?" | "Did we solve it correctly?" |
 
-      This is a narrative alignment check between the stakeholder's question and what
-      the analysis delivers. Even a technically perfect analysis fails validation if
-      it answers a different question than what was asked.
+      ## Sections to document
 
-      Sections:
       - **Request vs Findings Matrix**: For each success criterion in context.md, map it
         to a specific finding in analysis.md. Be explicit: if a criterion is not addressed,
         say so — do not mark it as covered when it isn't.
-      - **Answer Completeness**: Does the bottom line in analysis.md directly answer the
-        original question? If the question was "why did X happen", does the analysis
-        explain causality or only describe correlation?
+      - **Answer Completeness**: Does the bottom line answer the original question?
+        If the question was "why did X happen", does the analysis explain causality
+        or only describe correlation?
       - **Missing Angles**: What aspects of the original question are NOT covered?
-        Document them explicitly — these feed into Audit as gap candidates.
-      - **Stakeholder Verification Points**: Findings where the data is clear but the
-        business interpretation requires stakeholder confirmation (e.g., a metric behaves
-        unexpectedly — was there a known event that explains it?).
+      - **SQL Coverage**: For each number/table in analysis.md, verify there is a corresponding
+        SQL query. Flag any data point without SQL as "Unverifiable".
+      - **Stakeholder Verification Points**: Findings where business interpretation
+        requires stakeholder confirmation.
 
       Be blunt. If the analysis drifts from the original question, say so.
+
       **Quality Gate**: If more than one success criterion is unaddressed, stop and
       flag before proceeding to Audit.
     requires:
@@ -465,113 +178,34 @@ artifacts:
       ## Purpose: Is the ANSWER CORRECT?
 
       Audit checks CORRECTNESS — whether the analysis is technically sound and rigorous.
-      It assumes Validation already confirmed we're answering the right question.
+      You are a skeptical peer reviewer. Stress-test the foundations, expose inconsistencies.
 
-      | Validation | Audit |
-      |------------|-------|
-      | Did we answer the right question? | Is the answer correct? |
-      | Maps findings → success criteria | Verifies SQL and numbers |
-      | Checks narrative alignment | Checks technical rigor |
-      | "Are we solving the right problem?" | "Did we solve it correctly?" |
+      ## Sections to document
 
-      You are a skeptical peer reviewer who did NOT run this analysis. Your job is to
-      stress-test the foundations, expose inconsistencies, and identify what would make
-      this analysis sharper.
+      ### Phase 1: SQL Forensics
+      - **Coverage check**: Identify any number, table, or metric without a corresponding SQL query — mark as Blocker
+      - Re-run each query independently
+      - Compare results to numbers cited in findings
+      - Document: exact match, rounding difference, or mismatch
+      - Verdict per query: Verified / Verified with caveats / Failed
 
-      This audit has three distinct phases. Execute all three.
+      ### Phase 2: Narrative Critique
+      - Causality claims without causal evidence
+      - Selective emphasis (data points contradicting conclusion)
+      - Magnitude framing issues
+      - Trend cherry-picking
+      - Segment vs total inconsistency
+      - Bias exposure (survivorship, selection, period, Simpson's Paradox)
 
-      ---
+      ### Phase 3: Refinement Paths
+      For each path: Name, Trigger, Action, Expected Impact, Priority
 
-      ## Phase 1: SQL Forensics
-
-      **CRITICAL — reading order to protect objectivity:**
-
-      1. Open analysis.md and extract ONLY the SQL queries from the "Queries" section.
-         Do NOT read the findings, conclusions, or narrative yet.
-      2. For each query, form your own expectation of what it should return based solely
-         on the SQL logic and your knowledge of the schema.
-      3. Execute each query independently using `mcp__bigquery__execute_sql`.
-         Record your own results before reading what the analysis claims.
-      4. Only after you have your own numbers, read the findings section and compare.
-
-      This order ensures you are not anchored by the analyst's conclusions before
-      verifying the data. Reading findings first is a known source of auditor bias.
-
-      For each query:
-      - Run it using `mcp__bigquery__execute_sql` and compare results to the numbers
-        cited in the findings. Document exact match, rounding difference, or mismatch.
-      - Inspect the SQL logic critically:
-        - Are JOINs correct? (INNER vs LEFT — could LEFT be silently dropping nulls?)
-        - Are date filters applied consistently across all queries?
-        - Are WHERE clauses excluding data they shouldn't? (e.g., status filters, soft deletes)
-        - Are aggregations at the right grain? (double-counting via fanout on 1:N joins)
-        - Are NULLs handled explicitly or silently coerced?
-        - Is the time zone consistent across queries?
-      - For each query, produce a verdict: **Verified / Verified with caveats / Failed**
-        with a one-line explanation.
-
-      If any query fails to reproduce, this is a blocker. Document it and do not proceed
-      to Phase 2 until the discrepancy is resolved or explained.
-
-      ---
-
-      ## Phase 2: Narrative Critique
-
-      Read analysis.md as a story. Identify where the narrative and the data diverge.
-
-      Check for:
-      - **Causality claims without causal evidence**: If the analysis says "X caused Y",
-        does the data actually show causality or only correlation? Rewrite as correlation
-        if unsupported.
-      - **Selective emphasis**: Are there data points in the queries that contradict the
-        main conclusion but are not mentioned? Surface them.
-      - **Magnitude framing**: Are percentages used where absolutes would tell a different
-        story, or vice versa? (e.g., "50% increase" from 2 to 3 events)
-      - **Trend cherry-picking**: Does the time window chosen favor a particular narrative?
-        What would the finding look like with a different window?
-      - **Segment vs total inconsistency**: Do the segment breakdowns add up to the stated
-        total? If segments are exclusive and exhaustive, their sum must match.
-      - **Confidence level alignment**: Are High confidence claims backed by large samples
-        and clean data? Downgrade if not.
-      - **Bias exposure**:
-        - Survivorship bias: Are churned/failed/deleted records included where they should be?
-        - Selection bias: Is the population analyzed the same as the population the conclusion applies to?
-        - Period bias: Is this time window seasonal, affected by an anomaly, or otherwise unrepresentative?
-        - Simpson's Paradox: Does the aggregate trend hold when segmented?
-
-      Document each issue found as: **Issue**, **Evidence** (cite the specific finding or query),
-      **Severity** (Blocking / Major / Minor), and **Suggested Fix**.
-
-      ---
-
-      ## Phase 3: Refinement Paths
-
-      Based on Phase 1 and Phase 2 findings, generate explicit paths that could sharpen
-      this analysis. Each path should reference back to a specific phase in the workflow.
-
-      For each path:
-      - **Path Name**: Short descriptive title
-      - **Trigger**: What finding or issue prompted this? (cite it)
-      - **Action**: What specifically should be done? Which artifact does it affect?
-        - If it requires new data or a different model → refine **Research**
-        - If it requires redefining a metric or changing segmentation → refine **Plan**
-        - If it requires additional queries or a different framing → refine **Analysis**
-      - **Expected Impact**: What would this change in the conclusions if addressed?
-      - **Priority**: High / Medium / Low
-
-      Aim for 3–7 concrete paths. Avoid generic advice like "consider other factors" —
-      every path must be actionable with the tools available (BigQuery, DBT, Looker).
-
-      ---
-
-      ## Overall Audit Verdict
-
-      After all three phases:
-      - **SQL Integrity**: All verified / Issues found (list them)
-      - **Narrative Integrity**: Sound / Issues found (list them)
-      - **Confidence in Conclusions**: High / Medium / Low — with a one-paragraph justification
-      - **Blocker count**: How many issues must be resolved before sharing with stakeholders?
-      - **Recommended next step**: Ship as-is / Refine specific artifacts / Restart from Plan
+      ### Overall Audit Verdict
+      - SQL Integrity: All verified / Issues found
+      - Narrative Integrity: Sound / Issues found
+      - Confidence in Conclusions: High / Medium / Low
+      - Blocker count
+      - Recommended next step: Ship as-is / Refine / Restart from Plan
     requires:
       - analysis
       - validation
@@ -583,26 +217,25 @@ artifacts:
     instruction: |
       Create a concise executive summary for stakeholder consumption.
 
-      This is the primary deliverable. Make it actionable and clear.
+      ## Sections to document
 
-      Sections:
       - **Bottom Line**: One sentence answer to the original question
       - **Key Findings**: 3-5 bullet points with the most important insights
       - **Recommendations**: Suggested actions based on findings
       - **Supporting Evidence**: Links to detailed findings, dashboards, Looks
       - **Methodology Note**: Brief description of approach (1-2 sentences)
       - **Caveats & Audit Findings**: CRITICAL — must include:
-        - Audit Confidence level (copy from audit.md Overall Verdict)
+        - Audit Confidence level (copy from audit.md)
         - Key limitations that affect interpretation
-        - Bias considerations identified in audit.md Phase 2
+        - Bias considerations from audit.md Phase 2
         - If Audit Confidence was Medium or Low, explain why
       - **Next Steps**: Suggested follow-up analyses or actions
 
       Write for executives - lead with conclusions, not methodology.
-      Keep it to one page if possible. Link to Analysis for details.
+      Keep it to one page if possible.
 
       **IMPORTANT**: Do not soften or hide audit findings. Stakeholders need to know
-      the confidence level and limitations. This demonstrates rigor, not weakness.
+      the confidence level and limitations.
     requires:
       - analysis
       - validation
@@ -615,76 +248,29 @@ artifacts:
     instruction: |
       Generate an executive-quality HTML slide presentation from the completed analysis.
 
-      ## Prerequisites check
+      ## Prerequisites
 
-      This artifact requires the `frontend-slides` skill to be installed.
-      Before proceeding, verify it is available:
+      Invoke the `frontend-slides` skill using the Skill tool. If the skill is not found
+      (local `.claude/skills/` or global `~/.claude/skills/`), inform the user that the
+      presentation cannot be generated but the analysis is complete via summary.md.
 
-      ```bash
-      ls .claude/skills/ | grep slides
-      ```
+      ## Content to include
 
-      If the skill is NOT installed, inform the user:
+      1. **Title slide**: Analysis title, requestor, date, one-sentence bottom line
+      2. **The Question & Why It Matters**: Original question, business context, success criteria
+      3. **Key Findings** (1 slide per major finding, max 4): Statement, supporting data, confidence
+      4. **Recommendations**: Each recommendation with rationale and priority
+      5. **Caveats & Next Steps**: Critical limitations, refinement paths, follow-up analyses
+      6. **Appendix: Sources**: Source Registry, links to full analysis
 
-      > "The `frontend-slides` skill is not installed. To generate the executive
-      > presentation, install it by running `openspec update` after adding the skill
-      > to your `.claude/skills/` directory, or ask your team admin to make it
-      > available. The other artifacts (summary.md, Confluence, Slack) are still
-      > complete and usable without it."
+      ## Design guidance
 
-      Do not attempt to generate slides without the skill. The skill contains
-      specific design guidelines that ensure the output is executive-quality.
-      Improvising without it will produce generic results.
+      - Audience: executives, not data engineers
+      - Lead with conclusions, never methodology
+      - One idea per slide, max 4 bullet points
+      - Present caveats clearly — they demonstrate rigor
 
-      ## If the skill IS available: invoke it with this brief
-
-      Use the `frontend-slides` skill with the following content extracted from the
-      completed artifacts. The skill will handle all design decisions.
-
-      **Content to include — in this order:**
-
-      1. **Title slide**
-         - Analysis title (from context.md — the original question, not the change name)
-         - Requestor and date (from context.md)
-         - One-sentence bottom line (from summary.md)
-
-      2. **The Question & Why It Matters** (1 slide)
-         - The original stakeholder question verbatim
-         - Business context: what decision this informs
-         - Success criteria defined at the start
-
-      3. **Key Findings** (1 slide per major finding, max 4)
-         - Each finding as a clear statement
-         - The supporting number or chart
-         - Confidence level
-         - Source (which query or Looker asset)
-
-      4. **Recommendations** (1 slide)
-         - Each recommendation from summary.md
-         - Rationale and priority
-
-      5. **Caveats & Next Steps** (1 slide)
-         - Critical limitations from audit.md (blockers or majors only)
-         - Top 2-3 refinement paths from audit.md Phase 3 (High priority only)
-         - Suggested follow-up analyses from summary.md
-
-      6. **Appendix: Sources** (1 slide)
-         - The Source Registry from context.md and research.md
-         - Links to full analysis, Looker dashboards, Confluence page
-
-      ## Design guidance to pass to the skill
-
-      - Audience: executives and business stakeholders, not data engineers
-      - Tone: authoritative and clear — lead with conclusions, never methodology
-      - Data visualizations: simple tables and callout numbers only — no complex charts
-      - Each slide: one idea, maximum 4 bullet points, never full paragraphs
-      - Caveats: present clearly but not defensively — they demonstrate rigor
-
-      ## Output
-
-      Save the presentation as `presentation.html` in the change folder.
-      It should be self-contained (no external dependencies) so it can be
-      shared via email or Confluence attachment without broken assets.
+      Save as `presentation.html` in the change folder (self-contained, no external dependencies).
     requires:
       - summary
 
@@ -693,20 +279,9 @@ apply:
   tracks: null
   instruction: |
     The analytics-eng workflow produces documentation artifacts, not code changes.
-    The apply phase is used to:
-    - Share the summary and presentation with stakeholders
-    - Create or update Confluence pages with findings
-    - Create final Looker dashboards
-    - Archive the analysis for future reference
 
     Steps:
-    1. If `presentation.html` exists in the change folder, attach it to the Confluence page
-       and include it in the Slack notification.
-    2. Publish findings to Confluence:
-       - `mcp__atlassian__confluence_create_page` or `mcp__atlassian__confluence_update_page`
-       - Include: bottom line, key findings, link to presentation, link to full analysis
-    3. Create final Looker dashboard if analysis produced new Looks:
-       - `mcp__bigquery__looker_make_dashboard`
-    4. Notify stakeholders on Slack:
-       - `mcp__plugin_slack_slack__slack_send_message`
-       - Include: bottom line, Confluence link, presentation attachment if available
+    1. Publish findings to Confluence
+    2. Create final Looker dashboard if analysis produced new Looks
+    3. Notify stakeholders on Slack with bottom line and links
+    4. If presentation.html exists, include it in notifications
