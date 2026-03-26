@@ -1,84 +1,88 @@
 ---
 name: openspec-discover
-description: Locate and validate all resources identified in context.md. Creates research.md with the Project Map.
+description: Locates and validates all resources from context.md using the /locate skill. Creates research.md with a verified Project Map of BQ tables, DBT models, and Looker views. Use after context.md exists and before research.
 license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Discover
 
 Locate all resources, validate they exist, and create research.md with the Project Map.
 
-**Prerequisite:** context.md must exist
-
-**Output:** research.md (with Project Map section)
-
-**Next step:** `/opsx:research`
+**Requires:** context.md
+**Creates:** research.md (Project Map only)
+**Next:** `/openspec-research`
 
 ---
 
-## Input
+## Tool constraint — MANDATORY
 
-- A change name with context.md created
-- Or infer from conversation / auto-select if only one exists
+**Use ONLY the `/locate` skill to find resources.**
+
+Do NOT use Grep, Glob, Bash, or any MCP tool to search for models or tables.
+Do NOT use `search_catalog`, `get_table_info`, or filesystem searches as alternatives.
+ONLY `/locate` provides validated code paths for the Project Map.
+
+If `/locate` is unavailable or fails, ask the user — do NOT fall back to other tools.
 
 ---
 
 ## Steps
 
-### 1. Load context
+Copy this checklist and track progress:
+
+```
+Discover Progress:
+- [ ] Step 1: Load context
+- [ ] Step 2: Locate each resource with /locate
+- [ ] Step 3: Confirm BQ projects
+- [ ] Step 4: Validate FQDNs
+- [ ] Step 5: Create research.md with Project Map
+```
+
+### Step 1: Load context
 
 Read context.md and extract all resources with ⏳ status from Source Registry.
 
-If no change specified:
-- Auto-select if only one exists
-- Otherwise ask user which change to use
+If no change specified: auto-select if only one exists, otherwise ask.
 
-### 2. Locate each resource
+### Step 2: Locate each resource
 
-For each resource with ⏳ status:
-
-#### 2a. Invoke /locate
+For EACH resource with ⏳ status, run exactly:
 
 ```
 Skill: /locate
 Input: <resource_name>
 ```
 
-#### 2b. Handle not found
+Process resources ONE AT A TIME. Wait for each `/locate` result before starting the next.
 
-Ask user:
+**If not found:** Use AskUserQuestion:
 > "For `<resource_name>`, which project contains this model?"
-> Options: DBT project path, Looker project path, Skip
 
-#### 2c. Handle multiple matches
+**If multiple matches:** Use AskUserQuestion with the matches as options:
+> "I found N matches for `<resource>`. Which one?"
 
-Ask user:
-> "I found N matches for `<resource>`. Which should I include?"
-> - Option 1: `<project>` → `<dataset.table>`
-> - Option 2: `<project>` → `<dataset.table>`
+Do NOT select automatically. Wait for user response.
 
-**Wait for user response.** Only add selected resources.
+### Step 3: Confirm BQ projects
 
-### 3. Confirm BQ projects
+For each located resource where the BQ project is unclear, use AskUserQuestion:
 
-For each located resource where BQ project is unclear:
+> "I found `<model>` in `<project>`. Which BQ project does it materialize to?"
 
-Ask user:
-> "I found `<model>` in `<DBT|Looker>` project `<path>`. Which BQ project does it materialize to?"
+Do NOT assume BQ project from dataset name. Wrong project = wrong analysis.
 
-**Do not assume BQ project.** Wrong project = wrong analysis.
+### Step 4: Validate FQDNs
 
-### 4. Validate FQDNs
+For each resource, verify the table exists using `get_table_info`.
 
-For each resource, use `get_table_info` to verify table exists.
+If not found: ask user to clarify. Do NOT proceed with unvalidated FQDNs.
 
-If not found: Ask user to clarify. Do NOT proceed with unvalidated FQDNs.
-
-### 5. Create research.md with Project Map
+### Step 5: Create research.md with Project Map
 
 ```bash
 openspec instructions research --change "<name>" --json
@@ -99,10 +103,18 @@ Fill ONLY the Project Map section:
 
 | Table Name | BQ FQDN | Source Type | Code Project | Code Path |
 |------------|---------|-------------|--------------|-----------|
-| table_name | project.dataset.table | DBT / Looker / Raw | project-name | path/to/file |
 ```
 
-Leave other sections empty — they will be filled by `/opsx:research`.
+Leave all other sections empty — they belong to `/openspec-research`.
+
+---
+
+## Constraints
+
+- Do NOT write to any section of research.md other than Project Map
+- Do NOT modify context.md — it is read-only
+- Do NOT trace lineage or read code — that is research
+- Do NOT proceed with `?` in any FQDN — resolve all unknowns first
 
 ---
 
@@ -114,20 +126,4 @@ Summarize:
 - Resources skipped: N (with reasons)
 
 **Always end with:**
-> "Discovery complete. Run `/opsx:research` to analyze sources."
-
----
-
-## Principles
-
-- **Ask, don't guess**: If unclear, ask the user
-- **Validate before proceeding**: Every FQDN must be verified
-- **No `?` in FQDNs**: Resolve all unknowns before finishing
-
----
-
-## Guardrails
-
-- Never assume BQ project from dataset name
-- Never proceed with unvalidated FQDNs
-- If `/locate` fails and user skips, document reason in Project Map
+> "Discovery complete. Run `/openspec-research` to analyze sources."

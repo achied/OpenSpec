@@ -1,98 +1,77 @@
 ---
 name: openspec-investigate
-description: Start a new analysis - orchestrates context, discover, and research phases. Use when the user wants to begin investigating a data question or discrepancy.
+description: Orchestrates a full analytics investigation by running context, discover, and research phases sequentially. Creates context.md and research.md. Use when the user wants to start a new data investigation or discrepancy analysis.
 license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "2.0"
+  version: "3.0"
 ---
 
 # Investigate
 
 Orchestrator that runs the full investigation flow.
 
-**Artifacts created:** context.md, research.md
-
-**Next step:** `/opsx:analyze`
-
----
-
-## Flow
-
-```
-/opsx:investigate = /opsx:context → /opsx:discover → /opsx:research
-```
-
-| Phase | Skill | Output |
-|-------|-------|--------|
-| 1. Understand | `/opsx:context` | context.md |
-| 2. Map | `/opsx:discover` | research.md (Project Map) |
-| 3. Analyze | `/opsx:research` | research.md (completed) |
+**Creates:** context.md, research.md
+**Next:** `/openspec-analyze`
 
 ---
 
-## Input
+## Flow — STRICT SEQUENCE
 
-- A data question or discrepancy to investigate
-- Resources provided by the user (Slack, Confluence, Looker, tables)
-- Or nothing (will ask for clarification)
+```
+/openspec-investigate = /openspec-context → /openspec-discover → /openspec-research
+```
+
+| Phase | Skill | Creates | Gate |
+|-------|-------|---------|------|
+| 1. Understand | `/openspec-context` | context.md | User confirms question |
+| 2. Map | `/openspec-discover` | research.md (Project Map) | All FQDNs validated |
+| 3. Analyze | `/openspec-research` | research.md (completed) | Feasibility verdict |
+
+**Each phase MUST complete before the next begins.**
+
+Do NOT skip phases.
+Do NOT run phases in parallel.
+Do NOT combine phases into a single step.
 
 ---
 
-## Steps
+## Execution
 
-### 1. Context phase
+### Phase 1: Context
 
-Invoke `/opsx:context`:
-
-```
-Skill: /opsx:context
-```
-
-This will:
-- Ask for analysis type and resources
-- Create the change
-- Generate context.md with question and initial resources
-
-**Wait for completion before proceeding.**
-
-### 2. Discover phase
-
-Invoke `/opsx:discover`:
+Invoke the skill and wait for it to complete:
 
 ```
-Skill: /opsx:discover
+Skill: /openspec-context
 ```
 
-This will:
-- Locate all resources from context.md
-- Validate FQDNs
-- Create research.md with Project Map
+**Gate:** context.md exists with question and Source Registry. Do NOT proceed without it.
 
-**Wait for completion before proceeding.**
+### Phase 2: Discover
 
-### 3. Research phase
-
-Invoke `/opsx:research`:
+Invoke the skill and wait for it to complete:
 
 ```
-Skill: /opsx:research
+Skill: /openspec-discover
 ```
 
-This will:
-- Trace lineage for each source
-- Review code and document logic
-- Complete research.md with findings
-- Determine feasibility
+**Gate:** research.md exists with validated Project Map. Do NOT proceed if any FQDN has `?`.
+
+### Phase 3: Research
+
+Invoke the skill and wait for it to complete:
+
+```
+Skill: /openspec-research
+```
+
+**Gate:** research.md has Feasibility Verdict. If "Not Feasible", STOP.
 
 ---
 
 ## Output
-
-```bash
-openspec status --change "<name>"
-```
 
 Summarize:
 - Analysis name and location
@@ -100,23 +79,15 @@ Summarize:
 - Key findings from research (feasibility, key sources)
 
 **Always end with:**
-> "Investigation complete. Run `/opsx:analyze` when ready to execute."
+> "Investigation complete. Run `/openspec-analyze` when ready to execute."
 
 ---
 
 ## When to use individual skills
 
-| Scenario | Use |
-|----------|-----|
-| Start fresh investigation | `/opsx:investigate` (full flow) |
-| Already have context, need to map sources | `/opsx:discover` |
-| Already mapped, need deep research | `/opsx:research` |
-| Just need to understand the question | `/opsx:context` |
-
----
-
-## Guardrails
-
-- Each phase must complete before starting the next
-- If any phase fails or user stops, do not auto-continue
-- If feasibility is "Not Feasible", stop and discuss before proceeding
+| Scenario | Command |
+|----------|---------|
+| Start fresh investigation | `/openspec-investigate` (full flow) |
+| Already have context.md | `/openspec-discover` |
+| Already have Project Map | `/openspec-research` |
+| Just understand the question | `/openspec-context` |

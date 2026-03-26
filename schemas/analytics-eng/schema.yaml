@@ -5,6 +5,7 @@ skills:
   mode: replace
 commands:
   mode: replace
+  # No commands — skills are invoked directly via /openspec-*
 artifacts:
   - id: context
     generates: context.md
@@ -39,10 +40,13 @@ artifacts:
 
   - id: research
     generates: research.md
-    description: Data exploration and feasibility assessment
+    description: Data exploration and feasibility assessment (discover creates scaffold, research completes it)
     template: research.md
     instruction: |
-      Explore available data sources to assess feasibility of the analysis.
+      Complete research.md with findings from lineage tracing and code review.
+
+      **Note:** The Project Map section is already populated by the discover phase.
+      This instruction covers the remaining sections.
 
       ## Source Registry
 
@@ -54,6 +58,7 @@ artifacts:
 
       - **Source Registry** (continuation from context.md): Every asset read in this phase
       - **Data Lineage**: Document upstream dependencies using bigquery-lineage output
+      - **Linked Datasets**: Analytics Hub linked datasets (same data, not a copy)
       - **DBT Models Identified**: Relevant models with path, layer, purpose, key logic
       - **LookML Project** (if inspected): Views, explores, joins, hidden filters, derived tables
       - **Reusable Looker Assets** (via API): Existing dashboards, Looks that cover the topic

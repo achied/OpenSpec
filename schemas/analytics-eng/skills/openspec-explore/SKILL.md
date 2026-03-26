@@ -1,20 +1,20 @@
 ---
 name: openspec-explore
-description: Enter explore mode - a thinking partner for exploring data questions, investigating sources, and clarifying requirements. Use when the user wants to think through something before or during an analysis.
+description: Enters explore mode — a thinking partner for investigating data questions, tracing sources, and clarifying requirements. High freedom, no fixed workflow. Use when the user wants to think through something before or during an analysis.
 license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.5"
+  version: "2.0"
 ---
 
 # Explore Mode
 
 Think deeply about data. Investigate sources freely. Follow the analysis wherever it goes.
 
-**This is a stance, not a workflow.** No fixed steps. You're a thinking partner.
+**This is a stance, not a workflow.** No fixed steps. You are a thinking partner.
 
-**Explore mode is for thinking, not executing.** Query and investigate, but don't write analysis conclusions. To execute, exit and run `/opsx:analyze`.
+**Explore mode is for thinking, not executing.** Query and investigate, but do NOT write analysis conclusions. To execute, exit and run `/openspec-analyze`.
 
 ---
 
@@ -31,7 +31,7 @@ Think deeply about data. Investigate sources freely. Follow the analysis whereve
 ## The Stance
 
 - **Curious** — Ask questions that emerge naturally
-- **Data-grounded** — Query BigQuery, read DBT models, don't theorize in a vacuum
+- **Data-grounded** — Query BigQuery, read DBT models, do NOT theorize in a vacuum
 - **Visual** — Use ASCII diagrams for data flows and comparisons
 - **Adaptive** — Follow interesting threads, pivot when new data emerges
 
@@ -46,7 +46,7 @@ openspec list --json
 
 **If analysis exists, inherit context from research.md:**
 - Read Project Map (projects section)
-- Read Table → Project Mapping (Table Name, BQ FQDN, Source Type, Code Project, Code Path)
+- Read Table → Project Mapping
 - Use this context for all queries and searches
 
 **If no analysis**: Ask for DBT/Looker project location if needed.
@@ -82,22 +82,24 @@ If tables outside current project → ask about other projects.
 | Discovery | Where |
 |-----------|-------|
 | New data source | research.md Source Registry |
-| New table mapping | research.md Project Map + auto-memory |
-| Stakeholder context | context.md |
-| Methodology insight | plan.md |
+| New table mapping | research.md Project Map |
+| New stakeholder context | research.md "Additional Context" |
+| Methodology insight | Suggest for plan.md |
+
+**Do NOT modify context.md** — it is read-only after creation.
 
 ---
 
 ## Ending
 
-- "Ready to formalize? I can start with `/opsx:investigate`"
+- "Ready to formalize? I can start with `/openspec-investigate`"
 - Or keep exploring — no pressure to formalize
 
 ---
 
-## Guardrails
+## Constraints
 
-- Query and explore freely, but save conclusions for `/opsx:analyze`
-- Read Project Map from research.md first if analysis exists
+- Do NOT write analysis conclusions — that is `/openspec-analyze`
+- Do NOT modify context.md — it is a snapshot
 - Use FQDN (`project.dataset.table`) for all BigQuery references
-- Add discoveries to research.md and auto-memory as you go
+- Add discoveries to research.md as you go
