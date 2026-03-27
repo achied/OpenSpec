@@ -93,7 +93,7 @@ Input: <FQDN>
 
 **For discrepancies:** Trace EACH source independently. Find convergence (shared ancestor) or divergence (separate origins).
 
-**For NEW dependencies found:** Invoke `/locate` to find code path, then add to Project Map.
+**For NEW dependencies found:** Invoke `/locate` to find code path, validate FQDN with `get_table_info`, then add to Project Map.
 
 #### Step 3b: Code review
 

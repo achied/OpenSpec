@@ -19,15 +19,12 @@ Understand THE QUESTION and create context.md.
 
 ## Steps
 
-Copy this checklist and track progress:
+Show these steps once at the start, then announce each step as you begin it:
 
-```
-Context Progress:
-- [ ] Step 1: Clarify analysis type
-- [ ] Step 2: Gather resources
-- [ ] Step 3: Create change
-- [ ] Step 4: Generate context.md
-```
+1. Clarify analysis type
+2. Gather resources
+3. Create change
+4. Generate context.md
 
 ### Step 1: Clarify analysis type
 

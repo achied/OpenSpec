@@ -32,16 +32,13 @@ If `/locate` is unavailable or fails, ask the user — do NOT fall back to other
 
 ## Steps
 
-Copy this checklist and track progress:
+Show these steps once at the start, then announce each step as you begin it:
 
-```
-Discover Progress:
-- [ ] Step 1: Load context
-- [ ] Step 2: Locate each resource with /locate
-- [ ] Step 3: Confirm BQ projects
-- [ ] Step 4: Validate FQDNs
-- [ ] Step 5: Create research.md with Project Map
-```
+1. Load context
+2. Locate each resource with /locate
+3. Confirm BQ projects
+4. Validate FQDNs
+5. Create research.md with Project Map
 
 ### Step 1: Load context
 
@@ -51,14 +48,13 @@ If no change specified: auto-select if only one exists, otherwise ask.
 
 ### Step 2: Locate each resource
 
-For EACH resource with ⏳ status, run exactly:
+Load `/locate` once, then use it for all resources:
 
 ```
 Skill: /locate
-Input: <resource_name>
 ```
 
-Process resources ONE AT A TIME. Wait for each `/locate` result before starting the next.
+For EACH resource with ⏳ status, execute `/locate` with the resource name. Do NOT reload the skill for each resource.
 
 **If not found:** Use AskUserQuestion:
 > "For `<resource_name>`, which project contains this model?"
@@ -76,11 +72,13 @@ For each located resource where the BQ project is unclear, use AskUserQuestion:
 
 Do NOT assume BQ project from dataset name. Wrong project = wrong analysis.
 
-### Step 4: Validate FQDNs
+### Step 4: Validate FQDNs — MANDATORY
 
-For each resource, verify the table exists using `get_table_info`.
+**You MUST call `get_table_info` for EVERY FQDN before proceeding.** No exceptions.
 
-If not found: ask user to clarify. Do NOT proceed with unvalidated FQDNs.
+A FQDN is only valid if `get_table_info` returns successfully. If it fails, the FQDN is wrong — ask user to clarify.
+
+Do NOT create the Project Map with unvalidated FQDNs. Do NOT skip this step.
 
 ### Step 5: Create research.md with Project Map
 

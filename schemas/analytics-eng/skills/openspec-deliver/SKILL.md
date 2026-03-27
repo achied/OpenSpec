@@ -20,16 +20,16 @@ Generate summary, optional presentation, and share with stakeholders.
 
 ## Steps
 
-Copy this checklist and track progress:
+Create Tasks for delivery:
 
 ```
-Deliver Progress:
-- [ ] Step 1: Check prerequisites
-- [ ] Step 2: Check audit verdict
-- [ ] Step 3: Generate summary.md
-- [ ] Step 4: Generate presentation (optional)
-- [ ] Step 5: Share with stakeholders
+TaskCreate: subject: "Check prerequisites & audit", activeForm: "Checking prerequisites"
+TaskCreate: subject: "Generate summary.md", activeForm: "Generating summary"
+TaskCreate: subject: "Generate presentation", activeForm: "Generating presentation"
+TaskCreate: subject: "Share with stakeholders", activeForm: "Sharing findings"
 ```
+
+Process each Task sequentially. Mark as completed before starting the next.
 
 ### Step 1: Check prerequisites
 

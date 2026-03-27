@@ -76,7 +76,15 @@ Define objectives, methodology, metrics.
 openspec instructions analysis --change "<name>" --json
 ```
 
-Execute queries, document findings with confidence levels.
+**For each query or analysis unit, create a Task dynamically:**
+
+```
+TaskCreate:
+  subject: "Query: <short description of what this query answers>"
+  activeForm: "Running query: <short description>"
+```
+
+Mark each Task as completed after documenting the finding. This gives visibility into analysis progress.
 
 **Every number, table, or metric MUST have its SQL inline.** If you cannot show the query, do NOT show the number.
 
