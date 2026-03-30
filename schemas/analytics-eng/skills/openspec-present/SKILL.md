@@ -1,11 +1,11 @@
 ---
 name: openspec-present
-description: Generate an executive HTML slide presentation from a completed analytics-eng analysis. Use this ONLY after summary.md is final and audit.md has zero unresolved blockers. Requires the frontend-slides skill to be installed. Do not invoke mid-analysis.
+description: Generates an executive HTML slide presentation from a completed analytics-eng analysis. Requires summary.md final, audit.md with zero blockers, and the frontend-slides skill installed. Do not invoke mid-analysis.
 license: MIT
 compatibility: Requires openspec CLI, analytics-eng schema, and frontend-slides skill.
 metadata:
   author: openspec
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Executive Presentation

@@ -1,51 +1,56 @@
 ---
 name: openspec-deliver
-description: Generate summary and presentation, share with stakeholders. Use when analysis is complete and ready to be shared.
+description: Generates summary.md and optional presentation.html, then shares findings via Confluence and/or Slack. Verifies audit verdict before delivery. Use when the analysis is complete and ready to share with stakeholders.
 license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.3"
+  version: "2.0"
 ---
 
 # Deliver
 
-Deliver the analysis - generate summary, presentation, and share with stakeholders.
+Generate summary, optional presentation, and share with stakeholders.
 
----
-
-## Input
-
-Optionally specify an analysis name. If omitted, infer from context or prompt for selection.
-
-Always announce: "Using analysis: <name>"
+**Requires:** All analysis artifacts (context through audit) complete
+**Creates:** summary.md, presentation.html (optional)
+**Next:** `/openspec-archive`
 
 ---
 
 ## Steps
 
-### 1. Check prerequisites
+Create Tasks for delivery:
+
+```
+TaskCreate: subject: "Check prerequisites & audit", activeForm: "Checking prerequisites"
+TaskCreate: subject: "Generate summary.md", activeForm: "Generating summary"
+TaskCreate: subject: "Generate presentation", activeForm: "Generating presentation"
+TaskCreate: subject: "Share with stakeholders", activeForm: "Sharing findings"
+```
+
+Process each Task sequentially. Mark as completed before starting the next.
+
+### Step 1: Check prerequisites
 
 ```bash
 openspec status --change "<name>" --json
 ```
 
-Verify these artifacts are `done`:
-- context, research, plan, analysis, validation, audit
+Verify these artifacts are `done`: context, research, plan, analysis, validation, audit.
 
-**If prerequisites are not met:**
-- Display warning listing incomplete artifacts
-- Suggest: "Run `/opsx:analyze` first to complete the analysis."
-- Stop execution
+If not met: suggest "Run `/openspec-analyze` first" and STOP.
 
-### 2. Check audit verdict
+If no analysis name provided: auto-select if only one exists, otherwise ask.
 
-Read `openspec/changes/<name>/audit.md` and check the Overall Audit Verdict:
+### Step 2: Check audit verdict
+
+Read audit.md Overall Audit Verdict:
 - **Blocker count > 0**: Warn user, ask for confirmation to proceed
 - **Confidence = Low**: Warn user, suggest addressing refinement paths first
 - **Confidence = Medium/High**: Proceed
 
-### 3. Generate summary.md
+### Step 3: Generate summary.md
 
 ```bash
 openspec instructions summary --change "<name>" --json
@@ -55,52 +60,35 @@ openspec instructions summary --change "<name>" --json
 - Lead with bottom line answer
 - Include 3-5 key findings
 - Add recommendations and next steps
-- **MUST include audit findings in Caveats section:**
-  - Copy Audit Confidence level from audit.md
-  - List any bias exposures identified in Phase 2
-  - Document limitations that affect interpretation
 
-Show progress: "Created summary.md"
+**MUST include audit findings in Caveats section:**
+- Copy Audit Confidence level from audit.md
+- List any bias exposures from Phase 2
+- Document limitations that affect interpretation
+- Do NOT soften or hide audit findings
 
-**Verify audit integration**: Read the generated summary.md and confirm:
-- Audit Confidence is filled in (not blank)
-- Bias considerations are listed (or "None identified")
-- If audit had Medium/Low confidence, this is explained
+**Verify after writing**: Read summary.md and confirm Audit Confidence is filled in, not blank.
 
-### 4. Generate presentation.html (optional)
+### Step 4: Generate presentation (optional)
 
-Ask the user if they want a presentation:
-
+Use AskUserQuestion:
 > "Do you want to generate an executive slide deck?"
+> Options: Yes | No
 
-**If yes:**
-```bash
-openspec instructions presentation --change "<name>" --json
-```
+**If yes:** Invoke `/openspec-present`. If `frontend-slides` is not available, inform user and continue.
 
-Invoke `frontend-slides` skill. If not available, inform user and continue with summary only.
+**If no:** Skip.
 
-Show progress: "Created presentation.html"
+### Step 5: Share with stakeholders
 
-**If no:** Skip and proceed to delivery channels.
-
-### 5. Ask about delivery channels
-
-Use **AskUserQuestion** with options:
-
+Use AskUserQuestion:
 > "How would you like to share the findings?"
-> - "Confluence page" - Create/update a Confluence page
-> - "Slack message" - Post summary to a channel
-> - "Both" - Confluence + Slack notification
-> - "Skip sharing" - Keep artifacts locally
-
-### 6. Execute delivery based on user choice
+> Options: Confluence page | Slack message | Both | Skip sharing
 
 **Confluence:**
 - Use `mcp__atlassian__confluence_create_page` or `mcp__atlassian__confluence_update_page`
 - Include: bottom line, key findings, recommendations
 - Attach presentation.html if it exists
-- Link to full analysis artifacts
 
 **Slack:**
 - Use `mcp__plugin_slack_slack__slack_send_message`
@@ -108,11 +96,16 @@ Use **AskUserQuestion** with options:
 - Format: Bottom line + Confluence link + key findings
 - Keep it concise
 
-### 7. Show final status
+**Do NOT send any message without user confirmation.**
 
-```bash
-openspec status --change "<name>"
-```
+---
+
+## Constraints
+
+- Do NOT deliver if audit has unresolved blockers without user approval
+- Do NOT hide audit limitations in summary
+- Do NOT send external messages without asking user first
+- Do NOT modify any prior artifacts (context, research, analysis, audit)
 
 ---
 
@@ -129,18 +122,5 @@ openspec status --change "<name>"
 - Confluence: <link>
 - Slack: #<channel>
 
----
-
-Analysis complete and delivered.
+Analysis complete and delivered. Run `/openspec-archive` when ready.
 ```
-
----
-
-## Guardrails
-
-- Verify audit is complete before generating summary
-- Warn user and ask confirmation if audit has blockers or low confidence
-- Include audit findings and caveats in summary — do not hide limitations
-- Ask user about delivery channels before posting
-- Keep Slack messages concise — link to Confluence for details
-- Confirm before sending any external messages

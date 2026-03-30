@@ -1,11 +1,11 @@
 ---
 name: openspec-archive
-description: Archive a completed analysis. Use when the analysis is finished and ready to be stored for reference.
+description: Archives a completed analysis by moving it to the archive directory with a date prefix. Checks artifact completion and delivery status before archiving. Use when the analysis is finished and ready to be stored.
 license: MIT
 compatibility: Requires openspec CLI with analytics-eng schema.
 metadata:
   author: openspec
-  version: "1.1"
+  version: "2.0"
 ---
 
 # Archive
@@ -42,7 +42,7 @@ Check all artifacts:
 ### 2. Check if findings were shared
 
 If no evidence of sharing in summary.md:
-- Ask: "Findings weren't shared with stakeholders. Archive anyway, or run `/opsx:deliver` first?"
+- Ask: "Findings weren't shared with stakeholders. Archive anyway, or run `/openspec-deliver` first?"
 
 ### 3. Perform the archive
 
@@ -89,7 +89,7 @@ Show archive completion with:
 
 ---
 
-Start a new analysis with `/opsx:investigate`.
+Start a new analysis with `/openspec-investigate`.
 ```
 
 ---
@@ -134,4 +134,4 @@ Target archive directory already exists.
 - Don't block archive on warnings - just inform and confirm
 - Preserve .openspec.yaml when moving to archive
 - Show clear summary including question and answer
-- Remind user about `/opsx:investigate` for new analyses
+- Remind user about `/openspec-investigate` for new analyses

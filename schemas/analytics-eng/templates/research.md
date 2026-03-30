@@ -1,6 +1,6 @@
 ## Project Map
 
-<!-- CRITICAL: This section is used by /opsx:explore to inherit context.
+<!-- CRITICAL: This section is used by /openspec-explore to inherit context.
      Fill in as you discover projects. Save to auto-memory for future sessions. -->
 
 | Type | Name | Location | Notes |
